@@ -467,6 +467,36 @@ static void on_device_send_twin_update_complete_callback(DEVICE_TWIN_UPDATE_RESU
 **SRS_IOTHUBTRANSPORT_AMQP_COMMON_09_153: [**The memory allocated for `context` shall be released**]**
 
 
+
+
+
+
+
+#### on_device_get_twin_completed_callback
+```c
+static void on_device_get_twin_completed_callback(DEVICE_TWIN_UPDATE_TYPE update_type, const unsigned char* message, size_t length, void* context)
+```
+
+**SRS_IOTHUBTRANSPORT_AMQP_COMMON_12_001: [**If `message` or `context` is NULL, the callback shall return**]**
+**SRS_IOTHUBTRANSPORT_AMQP_COMMON_12_002: [**`on_get_twin_completed_callback` shall be invoked passing `status`, `message`, `length` and `user_context`**]**
+**SRS_IOTHUBTRANSPORT_AMQP_COMMON_12_003: [**The memory allocated for `context` shall be released**]**
+
+
+### IoTHubTransport_AMQP_Common_GetDeviceTwin
+```c
+IOTHUB_PROCESS_ITEM_RESULT IoTHubTransport_AMQP_Common_GetDeviceTwin(IOTHUB_DEVICE_HANDLE handle, IOTHUB_CLIENT_DEVICE_TWIN_CALLBACK completionCallback, void* callbackContext)
+```
+
+This function was introduced to be generic point for processing user requests, however it was been used only for device Twin. 
+
+**SRS_IOTHUBTRANSPORT_AMQP_COMMON_12_004: [**If `handle` or `completionCallback` are NULL, `IoTHubTransport_AMQP_Common_GetDeviceTwin` shall fail and return IOTHUB_CLIENT_INVALID_ARG.**]**
+**SRS_IOTHUBTRANSPORT_AMQP_COMMON_12_005: [**`IoTHubTransport_AMQP_Common_GetDeviceTwin` shall allocate memory for twin context.**]**
+**SRS_IOTHUBTRANSPORT_AMQP_COMMON_12_006: [**If the memory allocation fails `IoTHubTransport_AMQP_Common_GetDeviceTwin` shall return IOTHUB_CLIENT_ERROR.**]**
+**SRS_IOTHUBTRANSPORT_AMQP_COMMON_12_007: [**`IoTHubTransport_AMQP_Common_GetDeviceTwin` shall call `device_get_twin_async`.**]**
+**SRS_IOTHUBTRANSPORT_AMQP_COMMON_12_008: [**If `device_get_twin_async` fails `IoTHubTransport_AMQP_Common_GetDeviceTwin` shall free the allocated memory and return IOTHUB_CLIENT_ERROR.**]**
+**SRS_IOTHUBTRANSPORT_AMQP_COMMON_12_009: [**If `device_get_twin_async` succeeds `IoTHubTransport_AMQP_Common_GetDeviceTwin` shall return IOTHUB_CLIENT_OK.**]**
+
+
 ### IoTHubTransport_AMQP_Common_Subscribe_DeviceMethod
 ```c
 int IoTHubTransport_AMQP_Common_Subscribe_DeviceMethod(IOTHUB_DEVICE_HANDLE handle)

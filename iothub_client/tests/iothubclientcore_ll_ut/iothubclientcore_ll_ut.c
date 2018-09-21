@@ -117,6 +117,7 @@ MOCKABLE_FUNCTION(, int, FAKE_IoTHubTransport_Common_Subscribe_InputQueue, IOTHU
 MOCKABLE_FUNCTION(, void, FAKE_IoTHubTransport_Common_Unsubscribe_InputQueue, IOTHUB_DEVICE_HANDLE, handle);
 MOCKABLE_FUNCTION(, int, FAKE_IoTHubTransport_Subscribe_DeviceTwin, IOTHUB_DEVICE_HANDLE, handle);
 MOCKABLE_FUNCTION(, void, FAKE_IoTHubTransport_Unsubscribe_DeviceTwin, IOTHUB_DEVICE_HANDLE, handle);
+MOCKABLE_FUNCTION(, IOTHUB_CLIENT_RESULT, FAKE_IoTHubTransport_GetDeviceTwin, IOTHUB_DEVICE_HANDLE, handle, IOTHUB_CLIENT_DEVICE_TWIN_CALLBACK, completionCallback, void*, callbackContext);
 MOCKABLE_FUNCTION(, IOTHUB_CLIENT_RESULT, FAKE_IoTHubTransport_SendMessageDisposition, MESSAGE_CALLBACK_INFO*, messageData, IOTHUBMESSAGE_DISPOSITION_RESULT, disposition);
 MOCKABLE_FUNCTION(, const char*, FAKE_IoTHubMessage_GetMessageId, IOTHUB_MESSAGE_HANDLE, message);
 MOCKABLE_FUNCTION(, IOTHUB_PROCESS_ITEM_RESULT, FAKE_IoTHubTransport_ProcessItem, TRANSPORT_LL_HANDLE, handle, IOTHUB_IDENTITY_TYPE, item_type, IOTHUB_IDENTITY_INFO*, iothub_item);
@@ -526,26 +527,27 @@ STRING_HANDLE my_plafrom_get_platform_info(void)
 
 static TRANSPORT_PROVIDER FAKE_transport_provider =
 {
-    FAKE_IoTHubTransport_SendMessageDisposition,   /*pfIotHubTransport_SendMessageDisposition IoTHubTransport_SendMessageDisposition;*/
-    FAKE_IoTHubTransport_Subscribe_DeviceMethod, /*pfIoTHubTransport_Subscribe_DeviceMethod IoTHubTransport_Subscribe_DeviceMethod;*/
-    FAKE_IoTHubTransport_Unsubscribe_DeviceMethod, /*pfIoTHubTransport_Unsubscribe_DeviceMethod IoTHubTransport_Unsubscribe_DeviceMethod;*/
-    FAKE_IoTHubTransport_DeviceMethod_Response, /*pfIoTHubTransport_DeviceMethod_Response IoTHubTransport_DeviceMethod_Response;*/
-    FAKE_IoTHubTransport_Subscribe_DeviceTwin, /*pfIoTHubTransport_Subscribe_DeviceTwin IoTHubTransport_Subscribe_DeviceTwin; */
-    FAKE_IoTHubTransport_Unsubscribe_DeviceTwin, /*pfIoTHubTransport_Unsubscribe_DeviceTwin IoTHubTransport_Unsubscribe_DeviceTwin; */
-    FAKE_IoTHubTransport_ProcessItem,   /*pfIoTHubTransport_ProcessItem IoTHubTransport_ProcessItem     */
-    FAKE_IoTHubTransport_GetHostname,   /*pfIoTHubTransport_GetHostname IoTHubTransport_GetHostname     */
-    FAKE_IoTHubTransport_SetOption,     /*pfIoTHubTransport_SetOption IoTHubTransport_SetOption;        */
-    FAKE_IoTHubTransport_Create,        /*pfIoTHubTransport_Create IoTHubTransport_Create;              */
-    FAKE_IoTHubTransport_Destroy,       /*pfIoTHubTransport_Destroy IoTHubTransport_Destroy;            */
-    FAKE_IoTHubTransport_Register,      /*pfIotHubTransport_Register IoTHubTransport_Register;          */
-    FAKE_IoTHubTransport_Unregister,    /*pfIotHubTransport_Unregister IoTHubTransport_Unegister;       */
-    FAKE_IoTHubTransport_Subscribe,     /*pfIoTHubTransport_Subscribe IoTHubTransport_Subscribe;        */
-    FAKE_IoTHubTransport_Unsubscribe,   /*pfIoTHubTransport_Unsubscribe IoTHubTransport_Unsubscribe;    */
-    FAKE_IoTHubTransport_DoWork,        /*pfIoTHubTransport_DoWork IoTHubTransport_DoWork;              */
-    FAKE_IoTHubTransport_SetRetryPolicy,/*pfIoTHubTransport_SetRetryPolicy IoTHubTransport_SetRetryPolicy;*/
-    FAKE_IoTHubTransport_GetSendStatus, /*pfIoTHubTransport_GetSendStatus IoTHubTransport_GetSendStatus;*/
-    FAKE_IotHubTransport_Subscribe_InputQueue, /*pfIoTHubTransport_Subscribe_InputQueue IoTHubTransport_Subscribe_InputQueue; */
-    FAKE_IotHubTransport_Unsubscribe_InputQueue /*pfIoTHubTransport_Unsubscribe_InputQueue IoTHubTransport_Unsubscribe_InputQueue; */
+    FAKE_IoTHubTransport_SendMessageDisposition,    /*pfIotHubTransport_SendMessageDisposition IoTHubTransport_SendMessageDisposition;*/
+    FAKE_IoTHubTransport_Subscribe_DeviceMethod,    /*pfIoTHubTransport_Subscribe_DeviceMethod IoTHubTransport_Subscribe_DeviceMethod;*/
+    FAKE_IoTHubTransport_Unsubscribe_DeviceMethod,  /*pfIoTHubTransport_Unsubscribe_DeviceMethod IoTHubTransport_Unsubscribe_DeviceMethod;*/
+    FAKE_IoTHubTransport_DeviceMethod_Response,     /*pfIoTHubTransport_DeviceMethod_Response IoTHubTransport_DeviceMethod_Response;*/
+    FAKE_IoTHubTransport_Subscribe_DeviceTwin,      /*pfIoTHubTransport_Subscribe_DeviceTwin IoTHubTransport_Subscribe_DeviceTwin; */
+    FAKE_IoTHubTransport_Unsubscribe_DeviceTwin,    /*pfIoTHubTransport_Unsubscribe_DeviceTwin IoTHubTransport_Unsubscribe_DeviceTwin; */
+    FAKE_IoTHubTransport_GetDeviceTwin,             /*pfIoTHubTransport_GetDeviceTwin IoTHubTransport_GetDeviceTwin; */
+    FAKE_IoTHubTransport_ProcessItem,               /*pfIoTHubTransport_ProcessItem IoTHubTransport_ProcessItem     */
+    FAKE_IoTHubTransport_GetHostname,               /*pfIoTHubTransport_GetHostname IoTHubTransport_GetHostname     */
+    FAKE_IoTHubTransport_SetOption,                 /*pfIoTHubTransport_SetOption IoTHubTransport_SetOption;        */
+    FAKE_IoTHubTransport_Create,                    /*pfIoTHubTransport_Create IoTHubTransport_Create;              */
+    FAKE_IoTHubTransport_Destroy,                   /*pfIoTHubTransport_Destroy IoTHubTransport_Destroy;            */
+    FAKE_IoTHubTransport_Register,                  /*pfIotHubTransport_Register IoTHubTransport_Register;          */
+    FAKE_IoTHubTransport_Unregister,                /*pfIotHubTransport_Unregister IoTHubTransport_Unegister;       */
+    FAKE_IoTHubTransport_Subscribe,                 /*pfIoTHubTransport_Subscribe IoTHubTransport_Subscribe;        */
+    FAKE_IoTHubTransport_Unsubscribe,               /*pfIoTHubTransport_Unsubscribe IoTHubTransport_Unsubscribe;    */
+    FAKE_IoTHubTransport_DoWork,                    /*pfIoTHubTransport_DoWork IoTHubTransport_DoWork;              */
+    FAKE_IoTHubTransport_SetRetryPolicy,            /*pfIoTHubTransport_SetRetryPolicy IoTHubTransport_SetRetryPolicy;*/
+    FAKE_IoTHubTransport_GetSendStatus,             /*pfIoTHubTransport_GetSendStatus IoTHubTransport_GetSendStatus;*/
+    FAKE_IotHubTransport_Subscribe_InputQueue,      /*pfIoTHubTransport_Subscribe_InputQueue IoTHubTransport_Subscribe_InputQueue; */
+    FAKE_IotHubTransport_Unsubscribe_InputQueue     /*pfIoTHubTransport_Unsubscribe_InputQueue IoTHubTransport_Unsubscribe_InputQueue; */
 };
 
 static const TRANSPORT_PROVIDER* provideFAKE(void)
@@ -709,6 +711,8 @@ TEST_SUITE_INITIALIZE(suite_init)
     REGISTER_UMOCK_ALIAS_TYPE(LIST_ITEM_HANDLE, void*);
     REGISTER_UMOCK_ALIAS_TYPE(LIST_ACTION_FUNCTION, void*);
     REGISTER_UMOCK_ALIAS_TYPE(LIST_CONDITION_FUNCTION, void*);
+
+    REGISTER_UMOCK_ALIAS_TYPE(IOTHUB_CLIENT_DEVICE_TWIN_CALLBACK, void*);
 
 #ifndef DONT_USE_UPLOADTOBLOB
     REGISTER_UMOCK_ALIAS_TYPE(IOTHUB_CLIENT_LL_UPLOADTOBLOB_HANDLE, void*);
@@ -4391,6 +4395,85 @@ TEST_FUNCTION(IoTHubClientCore_LL_DoWork_SendReportedState_continue_processing_s
 
     ///cleanup
     IoTHubClientCore_LL_Destroy(h);
+}
+
+/* Tests_SRS_IOTHUBCLIENT_LL_12_026: [ If no errors occur IoTHubClient_LL_GetDeviceTwin shall return `IOTHUB_CLIENT_OK`.]*/
+TEST_FUNCTION(IoTHubClientCore_LL_GetDeviceTwin_succeeds)
+{
+    //arrange
+    IOTHUB_CLIENT_CORE_LL_HANDLE handle = IoTHubClientCore_LL_Create(&TEST_CONFIG);
+    (void)IoTHubClientCore_LL_SetDeviceTwinCallback(handle, (IOTHUB_CLIENT_DEVICE_TWIN_CALLBACK)0x1234, (void*)0x5678);
+    umock_c_reset_all_calls();
+
+    STRICT_EXPECTED_CALL(FAKE_IoTHubTransport_GetDeviceTwin(IGNORED_PTR_ARG, IGNORED_PTR_ARG, IGNORED_PTR_ARG))
+        .IgnoreAllArguments();
+
+    //act
+    IOTHUB_CLIENT_RESULT result = IoTHubClientCore_LL_GetDeviceTwin(handle);
+
+    //assert
+    ASSERT_ARE_EQUAL(IOTHUB_CLIENT_RESULT, IOTHUB_CLIENT_OK, result);
+    ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
+
+    //cleanup
+    IoTHubClientCore_LL_Destroy(handle);
+}
+
+/* Tests_SRS_IOTHUBCLIENT_LL_12_025: [ If IoTHubTransport_GetDeviceTwin fails, `IoTHubClient_LL_GetDeviceTwin` shall fail and return `IOTHUB_CLIENT_ERROR`.]*/
+TEST_FUNCTION(IoTHubClientCore_LL_GetDeviceTwin_transport_fails)
+{
+    //arrange
+    IOTHUB_CLIENT_CORE_LL_HANDLE handle = IoTHubClientCore_LL_Create(&TEST_CONFIG);
+    (void)IoTHubClientCore_LL_SetDeviceTwinCallback(handle, (IOTHUB_CLIENT_DEVICE_TWIN_CALLBACK)0x1234, (void*)0x5678);
+    umock_c_reset_all_calls();
+
+    STRICT_EXPECTED_CALL(FAKE_IoTHubTransport_GetDeviceTwin(IGNORED_PTR_ARG, IGNORED_PTR_ARG, IGNORED_PTR_ARG))
+        .IgnoreAllArguments()
+        .SetReturn(IOTHUB_CLIENT_ERROR);
+
+    //act
+    IOTHUB_CLIENT_RESULT result = IoTHubClientCore_LL_GetDeviceTwin(handle);
+
+    //assert
+    ASSERT_ARE_EQUAL(IOTHUB_CLIENT_RESULT, IOTHUB_CLIENT_ERROR, result);
+    ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
+
+    //cleanup
+    IoTHubClientCore_LL_Destroy(handle);
+}
+
+/* Tests_SRS_IOTHUBCLIENT_LL_12_023: [ If `iotHubClientHandle` is NULL, `IoTHubClient_LL_GetDeviceTwin` shall fail and return `IOTHUB_CLIENT_INVALID_ARG`.]*/
+TEST_FUNCTION(IoTHubClientCore_LL_GetDeviceTwin_handle_NULL_fails)
+{
+    //arrange
+    umock_c_reset_all_calls();
+
+    //act
+    IOTHUB_CLIENT_RESULT result = IoTHubClientCore_LL_GetDeviceTwin(NULL);
+
+    //assert
+    ASSERT_ARE_EQUAL(IOTHUB_CLIENT_RESULT, IOTHUB_CLIENT_INVALID_ARG, result);
+    ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
+
+    //cleanup
+}
+
+/* Tests_SRS_IOTHUBCLIENT_LL_12_027: [ If the twin user context or twin callback is NULL, `IoTHubClient_GetDeviceTwin` shall return `IOTHUB_CLIENT_ERROR`. ]*/
+TEST_FUNCTION(IoTHubClientCore_LL_GetDeviceTwin_handle_twin_not_initialized)
+{
+    //arrange
+    IOTHUB_CLIENT_CORE_LL_HANDLE handle = IoTHubClientCore_LL_Create(&TEST_CONFIG);
+    umock_c_reset_all_calls();
+
+    //act
+    IOTHUB_CLIENT_RESULT result = IoTHubClientCore_LL_GetDeviceTwin(handle);
+
+    //assert
+    ASSERT_ARE_EQUAL(IOTHUB_CLIENT_RESULT, IOTHUB_CLIENT_ERROR, result);
+    ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
+
+    //cleanup
+    IoTHubClientCore_LL_Destroy(handle);
 }
 
 /*Tests_SRS_IoTHubClientCore_LL_12_017: [ `IoTHubClientCore_LL_SetDeviceMethodCallback` shall fail and return `IOTHUB_CLIENT_INVALID_ARG` if parameter `iotHubClientHandle` is `NULL`. ]*/

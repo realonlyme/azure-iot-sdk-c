@@ -117,6 +117,15 @@ void IoTHubTransportAMQP_Unsubscribe_DeviceTwin(IOTHUB_DEVICE_HANDLE handle)
 **SRS_IOTHUBTRANSPORTAMQP_09_009: [**IoTHubTransportAMQP_Unsubscribe_DeviceTwin shall invoke IoTHubTransport_AMQP_Common_Unsubscribe_DeviceTwin()**]**
 
 
+## IoTHubTransportAMQP_GetDeviceTwin
+
+```c
+void IoTHubTransportAMQP_GetDeviceTwin(IOTHUB_DEVICE_HANDLE handle)
+```
+
+**SRS_IOTHUBTRANSPORTAMQP_12_001: [**IoTHubTransportAMQP_GetDeviceTwin shall invoke IoTHubTransport_AMQP_Common_DeviceTwin()**]**
+
+
 ## IoTHubTransportAMQP_Subscribe_DeviceMethod
 
 ```c

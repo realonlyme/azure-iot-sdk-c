@@ -121,6 +121,9 @@ TEST_SUITE_INITIALIZE(suite_init)
     REGISTER_GLOBAL_MOCK_RETURN(IoTHubClientCore_SetOption, IOTHUB_CLIENT_OK);
     REGISTER_GLOBAL_MOCK_RETURN(IoTHubClientCore_SetDeviceTwinCallback, IOTHUB_CLIENT_OK);
     REGISTER_GLOBAL_MOCK_RETURN(IoTHubClientCore_SendReportedState, IOTHUB_CLIENT_OK);
+    
+    REGISTER_GLOBAL_MOCK_RETURN(IoTHubClientCore_GetDeviceTwin, IOTHUB_CLIENT_OK);
+
     REGISTER_GLOBAL_MOCK_RETURN(IoTHubClientCore_SetDeviceMethodCallback, IOTHUB_CLIENT_OK);
     REGISTER_GLOBAL_MOCK_RETURN(IoTHubClientCore_SetDeviceMethodCallback_Ex, IOTHUB_CLIENT_OK);
     REGISTER_GLOBAL_MOCK_RETURN(IoTHubClientCore_DeviceMethodResponse, IOTHUB_CLIENT_OK);
@@ -335,6 +338,19 @@ TEST_FUNCTION(IoTHubClient_SendReportedState_Test)
     ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
 }
 
+TEST_FUNCTION(IoTHubClient_GetDeviceTwin_Test)
+{
+    //arrange
+    STRICT_EXPECTED_CALL(IoTHubClientCore_GetDeviceTwin(TEST_IOTHUB_CLIENT_CORE_HANDLE));
+
+    //act
+    IOTHUB_CLIENT_RESULT result = IoTHubClient_GetDeviceTwin(TEST_IOTHUB_CLIENT_HANDLE);
+
+    //assert
+    ASSERT_IS_TRUE(result == IOTHUB_CLIENT_OK);
+    ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
+}
+
 TEST_FUNCTION(IoTHubClient_SetDeviceMethodCallback_Test)
 {
     //arrange
@@ -361,7 +377,7 @@ TEST_FUNCTION(IoTHubClient_SetDeviceMethodCallback_Ex_Test)
     ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
 }
 
-TEST_FUNCTION(IoTHubClientCore_DeviceMethodResponse_Test)
+TEST_FUNCTION(IoTHubClient_DeviceMethodResponse_Test)
 {
     //arrange
     STRICT_EXPECTED_CALL(IoTHubClientCore_DeviceMethodResponse(TEST_IOTHUB_CLIENT_CORE_HANDLE, TEST_METHOD_HANDLE, TEST_UNSIGNED_CHAR, TEST_SIZE_T, TEST_INT));

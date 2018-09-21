@@ -158,6 +158,12 @@ typedef struct AMQP_TRANSPORT_DEVICE_TWIN_CONTEXT_TAG
     IOTHUB_CLIENT_CORE_LL_HANDLE client_handle;
 } AMQP_TRANSPORT_DEVICE_TWIN_CONTEXT;
 
+typedef struct AMQP_TRANSPORT_GET_TWIN_CONTEXT_TAG
+{
+    IOTHUB_CLIENT_DEVICE_TWIN_CALLBACK on_get_twin_completed_callback;
+    void* user_context;
+} AMQP_TRANSPORT_GET_TWIN_CONTEXT;
+
 
 // ---------- General Helpers ---------- //
 
@@ -1382,6 +1388,7 @@ static void destroy_device_message_disposition_info(DEVICE_MESSAGE_DISPOSITION_I
 }
 
 
+
 // ---------- API functions ---------- //
 
 TRANSPORT_LL_HANDLE IoTHubTransport_AMQP_Common_Create(const IOTHUBTRANSPORT_CONFIG* config, AMQP_GET_IO_TRANSPORT get_io_transport)
@@ -1781,6 +1788,81 @@ void IoTHubTransport_AMQP_Common_Unsubscribe_DeviceTwin(IOTHUB_DEVICE_HANDLE han
             }
         }
     }
+}
+
+static void on_device_get_twin_completed_callback(DEVICE_TWIN_UPDATE_TYPE update_type, const unsigned char* message, size_t length, void* context)
+{
+    (void)update_type;
+
+    if (message == NULL || context == NULL)
+    {
+        LogError("Invalid argument (message=%p, context=%p)", message, context);
+    }
+    else
+    {
+        AMQP_TRANSPORT_GET_TWIN_CONTEXT* getTwinCtx = (AMQP_TRANSPORT_GET_TWIN_CONTEXT*)context;
+
+        getTwinCtx->on_get_twin_completed_callback(DEVICE_TWIN_UPDATE_COMPLETE, message, length, getTwinCtx->user_context);
+
+        free(getTwinCtx);
+    }
+}
+
+IOTHUB_CLIENT_RESULT IoTHubTransport_AMQP_Common_GetDeviceTwin(IOTHUB_DEVICE_HANDLE handle, IOTHUB_CLIENT_DEVICE_TWIN_CALLBACK completionCallback, void* callbackContext)
+{
+    (void)callbackContext;
+
+    IOTHUB_CLIENT_RESULT result;
+
+    if (handle == NULL || completionCallback == NULL)
+    {
+        /*Codes_SRS_IOTHUBTRANSPORT_AMQP_COMMON_12_004: [If `handle` or `completionCallback` are NULL, `IoTHubTransport_AMQP_Common_GetDeviceTwin` shall fail and return IOTHUB_CLIENT_INVALID_ARG.]*/
+        LogError("Invalid argument (handle=%p, completionCallback=%p)", handle, completionCallback);
+        result = IOTHUB_CLIENT_INVALID_ARG;
+    }
+    else
+    {
+        AMQP_TRANSPORT_DEVICE_INSTANCE* registered_device = (AMQP_TRANSPORT_DEVICE_INSTANCE*)handle;
+
+        if (get_number_of_registered_devices(registered_device->transport_instance) != 1)
+        {
+            LogError("Device Twin not supported on device multiplexing scenario");
+            result = IOTHUB_CLIENT_ERROR;
+        }
+        else
+        {
+            AMQP_TRANSPORT_GET_TWIN_CONTEXT* getTwinCtx;
+
+            /*Codes_SRS_IOTHUBTRANSPORT_AMQP_COMMON_12_005: [`IoTHubTransport_AMQP_Common_GetDeviceTwin` shall allocate memory for twin context.]*/
+            if ((getTwinCtx = malloc(sizeof(AMQP_TRANSPORT_GET_TWIN_CONTEXT))) == NULL)
+            {
+                /*Codes_SRS_IOTHUBTRANSPORT_AMQP_COMMON_12_006: [If the memory allocation fails `IoTHubTransport_AMQP_Common_GetDeviceTwin` shall return IOTHUB_CLIENT_ERROR.]*/
+                LogError("Failed creating context for get twin");
+                result = IOTHUB_CLIENT_ERROR;
+            }
+            else
+            {
+                getTwinCtx->on_get_twin_completed_callback = completionCallback;
+                getTwinCtx->user_context = callbackContext;
+
+                /*Codes_SRS_IOTHUBTRANSPORT_AMQP_COMMON_12_007: [`IoTHubTransport_AMQP_Common_GetDeviceTwin` shall call `device_get_twin_async`.]*/
+                if (device_get_twin_async(registered_device->device_handle, on_device_get_twin_completed_callback, (void*)getTwinCtx) != RESULT_OK)
+                {
+                    /*Codes_SRS_IOTHUBTRANSPORT_AMQP_COMMON_12_008: [If `device_get_twin_async` fails `IoTHubTransport_AMQP_Common_GetDeviceTwin` shall free the allocated memory and return IOTHUB_CLIENT_ERROR.]*/
+                    LogError("Failed subscribing for device Twin updates");
+                    free(getTwinCtx);
+                    result = IOTHUB_CLIENT_ERROR;
+                }
+                else
+                {
+                    /*Codes_SRS_IOTHUBTRANSPORT_AMQP_COMMON_12_009: [If `device_get_twin_async` succeeds `IoTHubTransport_AMQP_Common_GetDeviceTwin` shall return IOTHUB_CLIENT_OK.]*/
+                    result = IOTHUB_CLIENT_OK;
+                }
+            }
+        }
+    }
+
+    return result;
 }
 
 int IoTHubTransport_AMQP_Common_Subscribe_DeviceMethod(IOTHUB_DEVICE_HANDLE handle)

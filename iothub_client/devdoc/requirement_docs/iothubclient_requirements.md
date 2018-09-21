@@ -41,6 +41,7 @@ extern IOTHUB_CLIENT_RESULT IoTHubClient_SetInputMessageCallback(IOTHUB_CLIENT_H
 ## Device Twin
 extern IOTHUB_CLIENT_RESULT IoTHubClient_SetDeviceTwinCallback(IOTHUB_CLIENT_HANDLE iotHubClientHandle, IOTHUB_CLIENT_DEVICE_TWIN_CALLBACK deviceTwinCallback, void* userContextCallback);
 extern IOTHUB_CLIENT_RESULT IoTHubClient_SendReportedState(IOTHUB_CLIENT_HANDLE iotHubClientHandle, const unsigned char* reportedState, size_t size, uint32_t reportedVersion, uint32_t lastSeenDesiredVersion, IOTHUB_CLIENT_REPORTED_STATE_CALLBACK reportedStateCallback, void* userContextCallback);
+extern IOTHUB_CLIENT_RESULT IoTHubClient_GetDeviceTwin(IOTHUB_CLIENT_LL_HANDLE iotHubClientHandle);
 
 ## IoTHub Methods
 extern IOTHUB_CLIENT_RESULT IoTHubClient_SetDeviceMethodCallback(IOTHUB_CLIENT_HANDLE iotHubClientHandle, IOTHUB_CLIENT_METHOD_CALLBACK_ASYNC deviceMethodCallback, void* userContextCallback);
@@ -421,6 +422,31 @@ extern IOTHUB_CLIENT_RESULT IoTHubClient_SendReportedState(IOTHUB_CLIENT_HANDLE 
 **SRS_IOTHUBCLIENT_10_021: [** `IoTHubClient_SendReportedState` shall be made thread-safe by using the lock created in IoTHubClient_Create. **]**
 
 **SRS_IOTHUBCLIENT_07_003: [** `IoTHubClient_SendReportedState` shall allocate a IOTHUB_QUEUE_CONTEXT object to be sent to the `IoTHubClient_LL_SendReportedState` function as a user context. **]**
+
+
+## IoTHubClient_GetDeviceTwin
+
+```c
+extern IOTHUB_CLIENT_RESULT IoTHubClient_GetDeviceTwin(IOTHUB_CLIENT_HANDLE iotHubClientHandle);
+```
+
+`IoTHubClient_GetDeviceTwin` retrieves the current Device Twin document from the IoTHub.
+
+**SRS_IOTHUBCLIENT_12_026: [** If `iotHubClientHandle` is `NULL`, `IoTHubClient_GetDeviceTwin` shall return `IOTHUB_CLIENT_INVALID_ARG`. **]**
+
+**SRS_IOTHUBCLIENT_12_027: [** If the twin user context or twin callback is NULL, `IoTHubClient_GetDeviceTwin` shall return `IOTHUB_CLIENT_ERROR`. **]**
+
+**SRS_IOTHUBCLIENT_12_028: [** If the transport connection is shared, the thread shall be started by calling `IoTHubTransport_StartWorkerThread`. **]**
+
+**SRS_IOTHUBCLIENT_12_029: [** If starting the thread fails, `IoTHubClient_GetDeviceTwin` shall return `IOTHUB_CLIENT_ERROR`. **]**
+
+**SRS_IOTHUBCLIENT_12_030: [** `IoTHubClient_GetDeviceTwin` shall be made thread-safe by using the lock created in IoTHubClient_Create. **]**
+
+**SRS_IOTHUBCLIENT_12_031: [** If acquiring the lock fails, `IoTHubClient_GetDeviceTwin` shall return `IOTHUB_CLIENT_ERROR`. **]**
+
+**SRS_IOTHUBCLIENT_12_032: [** `IoTHubClient_GetDeviceTwin` shall call `IoTHubClient_LL_GetDeviceTwin`, passing the `IoTHubClient_LL handle` as argument. **]**
+
+**SRS_IOTHUBCLIENT_12_033: [** When `IoTHubClient_LL_GetDeviceTwin` is called, `IoTHubClient_GetDeviceTwin` shall return the result of `IoTHubClient_LL_GetDeviceTwin`. **]**
 
 
 ## IoTHubClient_SetDeviceMethodCallback

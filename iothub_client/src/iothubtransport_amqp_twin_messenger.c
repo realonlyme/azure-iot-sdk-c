@@ -33,29 +33,29 @@ DEFINE_ENUM_STRINGS(TWIN_UPDATE_TYPE, TWIN_UPDATE_TYPE_VALUES);
 #define EMPTY_TWIN_BODY_DATA                            ((const unsigned char*)" ")
 #define EMPTY_TWIN_BODY_SIZE                            1
 
-#define TWIN_MESSAGE_PROPERTY_OPERATION                    "operation"
-#define TWIN_MESSAGE_PROPERTY_RESOURCE                    "resource"
-#define TWIN_MESSAGE_PROPERTY_VERSION                    "version"
+#define TWIN_MESSAGE_PROPERTY_OPERATION                 "operation"
+#define TWIN_MESSAGE_PROPERTY_RESOURCE                  "resource"
+#define TWIN_MESSAGE_PROPERTY_VERSION                   "version"
 #define TWIN_MESSAGE_PROPERTY_STATUS                    "status"
 
-#define TWIN_RESOURCE_DESIRED                            "/notifications/twin/properties/desired"
-#define TWIN_RESOURCE_REPORTED                            "/properties/reported"
+#define TWIN_RESOURCE_DESIRED                           "/notifications/twin/properties/desired"
+#define TWIN_RESOURCE_REPORTED                          "/properties/reported"
 
-#define TWIN_CORRELATION_ID_PROPERTY_NAME                "com.microsoft:channel-correlation-id"
-#define TWIN_API_VERSION_PROPERTY_NAME                    "com.microsoft:api-version"
-#define TWIN_CORRELATION_ID_PROPERTY_FORMAT                "twin:%s"
-#define TWIN_API_VERSION_NUMBER                            "2016-11-14"
+#define TWIN_CORRELATION_ID_PROPERTY_NAME               "com.microsoft:channel-correlation-id"
+#define TWIN_API_VERSION_PROPERTY_NAME                  "com.microsoft:api-version"
+#define TWIN_CORRELATION_ID_PROPERTY_FORMAT             "twin:%s"
+#define TWIN_API_VERSION_NUMBER                         "2016-11-14"
 
-#define DEFAULT_MAX_TWIN_SUBSCRIPTION_ERROR_COUNT        3
-#define DEFAULT_TWIN_OPERATION_TIMEOUT_SECS                300.0
+#define DEFAULT_MAX_TWIN_SUBSCRIPTION_ERROR_COUNT       3
+#define DEFAULT_TWIN_OPERATION_TIMEOUT_SECS             300.0
 
-static char* DEFAULT_TWIN_SEND_LINK_SOURCE_NAME =        "twin";
+static char* DEFAULT_TWIN_SEND_LINK_SOURCE_NAME =       "twin";
 static char* DEFAULT_TWIN_RECEIVE_LINK_TARGET_NAME =    "twin";
 
-static const char* TWIN_OPERATION_PATCH =                "PATCH";
-static const char* TWIN_OPERATION_GET =                    "GET";
-static const char* TWIN_OPERATION_PUT =                    "PUT";
-static const char* TWIN_OPERATION_DELETE =                "DELETE";
+static const char* TWIN_OPERATION_PATCH =               "PATCH";
+static const char* TWIN_OPERATION_GET =                 "GET";
+static const char* TWIN_OPERATION_PUT =                 "PUT";
+static const char* TWIN_OPERATION_DELETE =              "DELETE";
 
 
 #define TWIN_OPERATION_TYPE_STRINGS \
@@ -127,6 +127,8 @@ typedef struct TWIN_OPERATION_CONTEXT_TAG
     TWIN_MESSENGER_REPORT_STATE_COMPLETE_CALLBACK on_report_state_complete_callback;
     const void* on_report_state_complete_context;
     time_t time_sent;
+    TWIN_STATE_UPDATE_CALLBACK on_get_twin_completed_callback;
+    void* userContext;
 } TWIN_OPERATION_CONTEXT;
 
 
@@ -1859,6 +1861,62 @@ int twin_messenger_report_state_async(TWIN_MESSENGER_HANDLE twin_msgr_handle, CO
                 result = RESULT_OK;
             }
         }
+    }
+
+    return result;
+}
+
+int twin_messenger_get_twin_async(TWIN_MESSENGER_HANDLE twin_msgr_handle, TWIN_STATE_UPDATE_CALLBACK on_get_twin_completed_callback, void* context)
+{
+    int result;
+
+    if (twin_msgr_handle == NULL || on_get_twin_completed_callback == NULL)
+    {
+        /*Codes_SRS_IOTHUBTRANSPORT_AMQP_TWIN_MESSENGER_12_001: [If `twin_msgr_handle` or `on_get_twin_completed_callback` is NULL, `twin_messenger_get_twin_async` shall fail and return a non zero value]*/
+        LogError("Invalid argument (twin_msgr_handle=%p, on_get_twin_completed_callback=%p)", twin_msgr_handle, on_get_twin_completed_callback);
+        result = __FAILURE__;
+    }
+    else
+    {
+        TWIN_MESSENGER_INSTANCE* twin_msgr = (TWIN_MESSENGER_INSTANCE*)twin_msgr_handle;
+        TWIN_OPERATION_CONTEXT* twin_op_ctx;
+
+        /*Codes_SRS_IOTHUBTRANSPORT_AMQP_TWIN_MESSENGER_12_002: [`twin_messenger_get_twin_async` shall allocate memory for `TWIN_MESSENGER_INSTANCE`]*/
+        if ((twin_op_ctx = create_twin_operation_context(twin_msgr, TWIN_OPERATION_TYPE_GET)) == NULL)
+        {
+            /*Codes_SRS_IOTHUBTRANSPORT_AMQP_TWIN_MESSENGER_12_003: [If the memory allocation fails `twin_messenger_get_twin_async` shall return a non zero value]*/
+            LogError("Failed creating a context for TWIN request (%s, TWIN_OPERATION_TYPE_GET)", twin_msgr->device_id);
+            result = __FAILURE__;
+        }
+        else
+        {
+            twin_op_ctx->on_get_twin_completed_callback = on_get_twin_completed_callback;
+            twin_op_ctx->userContext = context;
+
+            /*Codes_SRS_IOTHUBTRANSPORT_AMQP_TWIN_MESSENGER_12_004: [`twin_messenger_get_twin_async` shall add the initialized tein context to the operation queue]*/
+            if (add_twin_operation_context_to_queue(twin_op_ctx) != RESULT_OK)
+            {
+                /*Codes_SRS_IOTHUBTRANSPORT_AMQP_TWIN_MESSENGER_12_005: [If adding to the queue fails `twin_messenger_get_twin_async` shall free the allocated memory and  return a non zero value]*/
+                LogError("Failed queueing TWIN request context (%s, TWIN_OPERATION_TYPE_GET)", twin_msgr->device_id);
+
+                destroy_twin_operation_context(twin_op_ctx);
+                result = __FAILURE__;
+            }
+            else if (send_twin_operation_request(twin_msgr, twin_op_ctx, NULL) != RESULT_OK)
+            {
+                LogError("Failed sending TWIN request (%s, TWIN_OPERATION_TYPE_GET)", twin_msgr->device_id);
+
+                (void)remove_twin_operation_context_from_queue(twin_op_ctx);
+                destroy_twin_operation_context(twin_op_ctx);
+                result = __FAILURE__;
+            }
+            else
+            {
+                /*Codes_SRS_IOTHUBTRANSPORT_AMQP_TWIN_MESSENGER_12_006: [IF adding to the queue successful `twin_messenger_get_twin_async` shall return a RESULT_OK]*/
+                result = RESULT_OK;
+            }
+        }
+
     }
 
     return result;

@@ -112,6 +112,7 @@ MOCKABLE_FUNCTION(, int, device_start_async, AMQP_DEVICE_HANDLE, handle, SESSION
 MOCKABLE_FUNCTION(, int, device_stop, AMQP_DEVICE_HANDLE, handle);
 MOCKABLE_FUNCTION(, void, device_do_work, AMQP_DEVICE_HANDLE, handle);
 MOCKABLE_FUNCTION(, int, device_send_event_async, AMQP_DEVICE_HANDLE, handle, IOTHUB_MESSAGE_LIST*, message, ON_DEVICE_D2C_EVENT_SEND_COMPLETE, on_device_d2c_event_send_complete_callback, void*, context);
+MOCKABLE_FUNCTION(, int, device_get_twin_async, AMQP_DEVICE_HANDLE, handle, DEVICE_TWIN_UPDATE_RECEIVED_CALLBACK, on_device_get_twin_completed_callback, void*, context);
 MOCKABLE_FUNCTION(, int, device_send_twin_update_async, AMQP_DEVICE_HANDLE, handle, CONSTBUFFER_HANDLE, data, DEVICE_SEND_TWIN_UPDATE_COMPLETE_CALLBACK, on_send_twin_update_complete_callback, void*, context);
 MOCKABLE_FUNCTION(, int, device_subscribe_for_twin_updates, AMQP_DEVICE_HANDLE, handle, DEVICE_TWIN_UPDATE_RECEIVED_CALLBACK, on_device_twin_update_received_callback, void*, context);
 MOCKABLE_FUNCTION(, int, device_unsubscribe_for_twin_updates, AMQP_DEVICE_HANDLE, handle);

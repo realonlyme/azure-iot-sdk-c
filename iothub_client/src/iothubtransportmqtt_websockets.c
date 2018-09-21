@@ -124,6 +124,16 @@ static void IoTHubTransportMqtt_WS_Unsubscribe(IOTHUB_DEVICE_HANDLE handle)
     IoTHubTransport_MQTT_Common_Unsubscribe(handle);
 }
 
+static IOTHUB_CLIENT_RESULT IoTHubTransportMqtt_WS_GetDeviceTwin(IOTHUB_DEVICE_HANDLE handle, IOTHUB_CLIENT_DEVICE_TWIN_CALLBACK completionCallback, void* callbackContext)
+{
+    /***********************************************************/
+    (void)handle;
+    (void)completionCallback;
+    (void)callbackContext;
+    // Codes_SRS_IOTHUBTRANSPORTAMQP_09_009: [IoTHubTransportAMQP_Unsubscribe_DeviceTwin shall invoke IoTHubTransport_AMQP_Common_Unsubscribe_DeviceTwin()]
+    return __FAILURE__; // IoTHubTransport_AMQP_Common_Unsubscribe_DeviceTwin(handle);
+}
+
 /* Codes_SRS_IOTHUB_MQTT_WEBSOCKET_TRANSPORT_07_015: [ IoTHubTransportMqtt_WS_Subscribe_DeviceMethod shall call into the IoTHubTransport_MQTT_Common_Subscribe_DeviceMethod function ] */
 static int IoTHubTransportMqtt_WS_Subscribe_DeviceMethod(IOTHUB_DEVICE_HANDLE handle)
 {
@@ -224,8 +234,9 @@ static void IoTHubTransportMqtt_WS_Unsubscribe_InputQueue(IOTHUB_DEVICE_HANDLE h
 IoTHubTransport_SendMessageDisposition = IoTHubTransport_WS_SendMessageDisposition
 IoTHubTransport_Subscribe_DeviceMethod = IoTHubTransport_WS_Subscribe_DeviceMethod
 IoTHubTransport_Unsubscribe_DeviceMethod IoTHubTransport_WS_Unsubscribe_DeviceMethod
-IoTHubTransport_Subscribe_DeviceTwin IoTHubTransport_WS_Subscribe_DeviceTwin
-IoTHubTransport_Unsubscribe_DeviceTwin IoTHubTransport_WS_Unsubscribe_DeviceTwin
+IoTHubTransport_Subscribe_DeviceTwin = IoTHubTransport_WS_Subscribe_DeviceTwin
+IoTHubTransport_Unsubscribe_DeviceTwin = IoTHubTransport_WS_Unsubscribe_DeviceTwin
+IoTHubTransport_GetDeviceTwin = IoTHubTransportAMQP_GetDeviceTwin
 IoTHubTransport_GetHostname = IoTHubTransportMqtt_WS_GetHostname
 IoTHubTransport_Create = IoTHubTransportMqtt_WS_Create
 IoTHubTransport_Destroy = IoTHubTransportMqtt_WS_Destroy
@@ -240,6 +251,7 @@ static TRANSPORT_PROVIDER thisTransportProvider_WebSocketsOverTls = {
     IoTHubTransportMqtt_WS_DeviceMethod_Response,
     IoTHubTransportMqtt_WS_Subscribe_DeviceTwin,
     IoTHubTransportMqtt_WS_Unsubscribe_DeviceTwin,
+    IoTHubTransportMqtt_WS_GetDeviceTwin,
     IoTHubTransportMqtt_WS_ProcessItem,
     IoTHubTransportMqtt_WS_GetHostname,
     IoTHubTransportMqtt_WS_SetOption,

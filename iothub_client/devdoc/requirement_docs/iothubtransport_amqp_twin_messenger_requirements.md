@@ -387,3 +387,22 @@ OPTIONHANDLER_HANDLE twin_messenger_retrieve_options(TWIN_MESSENGER_HANDLE twin_
 **SRS_IOTHUBTRANSPORT_AMQP_TWIN_MESSENGER_09_107: [**If `twin_msgr_handle` is NULL, twin_messenger_retrieve_options shall fail and return NULL**]**
 
 **SRS_IOTHUBTRANSPORT_AMQP_TWIN_MESSENGER_09_108: [**twin_messenger_retrieve_options() shall return the result of amqp_messenger_retrieve_options()**]**
+
+
+##### twin_messenger_get_twin_async
+```c
+MESSAGE_HANDLE twin_messenger_get_twin_async(TWIN_MESSENGER_HANDLE twin_msgr_handle, TWIN_STATE_UPDATE_CALLBACK on_get_twin_completed_callback, void* context)
+```
+
+**SRS_IOTHUBTRANSPORT_AMQP_TWIN_MESSENGER_12_001: [**If `twin_msgr_handle` or `on_get_twin_completed_callback` is NULL, `twin_messenger_get_twin_async` shall fail and return a non zero value**]**
+
+**SRS_IOTHUBTRANSPORT_AMQP_TWIN_MESSENGER_12_002: [**`twin_messenger_get_twin_async` shall allocate memory for `TWIN_MESSENGER_INSTANCE`**]**
+
+**SRS_IOTHUBTRANSPORT_AMQP_TWIN_MESSENGER_12_003: [**If the memory allocation fails `twin_messenger_get_twin_async` shall return a non zero value**]**
+
+**SRS_IOTHUBTRANSPORT_AMQP_TWIN_MESSENGER_12_004: [**`twin_messenger_get_twin_async` shall add the initialized tein context to the operation queue**]**
+
+**SRS_IOTHUBTRANSPORT_AMQP_TWIN_MESSENGER_12_005: [**If adding to the queue fails `twin_messenger_get_twin_async` shall free the allocated memory and  return a non zero value**]**
+
+**SRS_IOTHUBTRANSPORT_AMQP_TWIN_MESSENGER_12_006: [**IF adding to the queue successful `twin_messenger_get_twin_async` shall return a RESULT_OK**]**
+

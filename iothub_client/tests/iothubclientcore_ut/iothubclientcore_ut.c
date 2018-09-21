@@ -482,6 +482,7 @@ TEST_SUITE_INITIALIZE(suite_init)
     REGISTER_UMOCK_ALIAS_TYPE(const VECTOR_HANDLE, void*);
     REGISTER_UMOCK_ALIAS_TYPE(TRANSPORT_HANDLE, void*);
     REGISTER_UMOCK_ALIAS_TYPE(IOTHUB_CLIENT_CORE_HANDLE, void*);
+    REGISTER_UMOCK_ALIAS_TYPE(IOTHUB_QUEUE_CONTEXT, void*);
     REGISTER_UMOCK_ALIAS_TYPE(IOTHUB_CLIENT_STATUS, int);
     REGISTER_UMOCK_ALIAS_TYPE(IOTHUB_CLIENT_RESULT, int);
     REGISTER_UMOCK_ALIAS_TYPE(IOTHUBMESSAGE_DISPOSITION_RESULT, int);
@@ -2395,6 +2396,90 @@ TEST_FUNCTION(IoTHubClientCore_SendReportedState_report_state_callback_succeed)
 
     // assert
     ASSERT_ARE_EQUAL(IOTHUB_CLIENT_RESULT, IOTHUB_CLIENT_OK, result);
+    ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
+
+    // cleanup
+    IoTHubClientCore_Destroy(iothub_handle);
+}
+
+
+
+/* Tests_SRS_IOTHUBCLIENT_12_026: [ If `iotHubClientHandle`is `NULL`, `IoTHubClient_GetDeviceTwin` shall return `IOTHUB_CLIENT_INVALID_ARG`. ]*/
+TEST_FUNCTION(IoTHubClientCore_GetDeviceTwin_client_handle_NULL_fail)
+{
+    // act
+    IOTHUB_CLIENT_RESULT result = IoTHubClientCore_GetDeviceTwin(NULL);
+
+    // assert
+    ASSERT_ARE_EQUAL(IOTHUB_CLIENT_RESULT, IOTHUB_CLIENT_INVALID_ARG, result);
+    ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
+
+    // cleanup
+}
+
+/* Tests_SRS_IOTHUBCLIENT_12_032: [ `IoTHubClient_GetDeviceTwin` shall call `IoTHubClient_LL_GetDeviceTwin`, passing the `IoTHubClient_LL handle` as argument. ]*/
+/* Tests_SRS_IOTHUBCLIENT_12_033: [ When `IoTHubClient_LL_GetDeviceTwin` is called, `IoTHubClient_GetDeviceTwin` shall return the result of `IoTHubClient_LL_GetDeviceTwin`. ]*/
+TEST_FUNCTION(IoTHubClientCore_GetDeviceTwin_succeed)
+{
+    // arrange
+    IOTHUB_CLIENT_CORE_HANDLE iothub_handle = IoTHubClientCore_Create(TEST_CLIENT_CONFIG);
+    (void)IoTHubClientCore_SetDeviceTwinCallback(iothub_handle, test_device_twin_callback, NULL);
+
+    umock_c_reset_all_calls();
+
+    STRICT_EXPECTED_CALL(Lock(IGNORED_PTR_ARG))
+        .IgnoreArgument_handle();
+    STRICT_EXPECTED_CALL(IoTHubClientCore_LL_GetDeviceTwin(TEST_IOTHUB_CLIENT_CORE_LL_HANDLE));
+    STRICT_EXPECTED_CALL(Unlock(IGNORED_PTR_ARG))
+        .IgnoreArgument_handle();
+
+    // act
+    IOTHUB_CLIENT_RESULT result = IoTHubClientCore_GetDeviceTwin(iothub_handle);
+
+    // assert
+    ASSERT_ARE_EQUAL(IOTHUB_CLIENT_RESULT, IOTHUB_CLIENT_OK, result);
+    ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
+
+    // cleanup
+    IoTHubClientCore_Destroy(iothub_handle);
+}
+
+/* Tests_SRS_IOTHUBCLIENT_12_027: [ If the twin user context or twin callback is NULL, `IoTHubClient_GetDeviceTwin` shall return `IOTHUB_CLIENT_ERROR`. ]*/
+TEST_FUNCTION(IoTHubClientCore_GetDeviceTwin_twin_not_initialized)
+{
+    // arrange
+    IOTHUB_CLIENT_CORE_HANDLE iothub_handle = IoTHubClientCore_Create(TEST_CLIENT_CONFIG);
+
+    umock_c_reset_all_calls();
+
+    // act
+    IOTHUB_CLIENT_RESULT result = IoTHubClientCore_GetDeviceTwin(iothub_handle);
+
+    // assert
+    ASSERT_ARE_EQUAL(IOTHUB_CLIENT_RESULT, IOTHUB_CLIENT_ERROR, result);
+    ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
+
+    // cleanup
+    IoTHubClientCore_Destroy(iothub_handle);
+}
+
+/* Tests_SRS_IOTHUBCLIENT_12_029: [ If starting the thread fails, `IoTHubClient_GetDeviceTwin` shall return `IOTHUB_CLIENT_ERROR`. ]*/
+TEST_FUNCTION(IoTHubClientCore_GetDeviceTwin_lock_fails)
+{
+    // arrange
+    IOTHUB_CLIENT_CORE_HANDLE iothub_handle = IoTHubClientCore_Create(TEST_CLIENT_CONFIG);
+    (void)IoTHubClientCore_SetDeviceTwinCallback(iothub_handle, test_device_twin_callback, NULL);
+
+    umock_c_reset_all_calls();
+
+    STRICT_EXPECTED_CALL(Lock(IGNORED_PTR_ARG))
+        .SetReturn(LOCK_ERROR);
+
+    // act
+    IOTHUB_CLIENT_RESULT result = IoTHubClientCore_GetDeviceTwin(iothub_handle);
+
+    // assert
+    ASSERT_ARE_EQUAL(IOTHUB_CLIENT_RESULT, IOTHUB_CLIENT_ERROR, result);
     ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
 
     // cleanup

@@ -805,6 +805,34 @@ void IoTHubClient_LL_RetrievePropertyComplete(IOTHUB_CLIENT_LL_HANDLE handle, DE
 
 **SRS_IOTHUBCLIENT_LL_07_016: [** If `deviceTwinCallback` is set and `DEVICE_TWIN_UPDATE_COMPLETE` has been encountered then `IoTHubClient_LL_RetrievePropertyComplete` shall call `deviceTwinCallback`. **]**
 
+## IoTHubClient_LL_GetDeviceTwin
+
+```c
+extern IOTHUB_CLIENT_RESULT IoTHubClient_LL_GetDeviceTwin(IOTHUB_CLIENT_LL_HANDLE iotHubClientHandle, IOTHUB_CLIENT_DEVICE_TWIN_CALLBACK deviceTwinCallback, void* userContextCallback);
+```
+**SRS_IOTHUBCLIENT_LL_12_023: [** If `iotHubClientHandle` is `NULL`, `IoTHubClient_LL_GetDeviceTwin` shall fail and return `IOTHUB_CLIENT_INVALID_ARG`.**]**
+
+**SRS_IOTHUBCLIENT_LL_12_024: [** IoTHubClient_LL_GetDeviceTwin shall invoke IoTHubTransport_GetDeviceTwin, passing `on_get_device_twin_completed` and the user data as context **]**
+
+**SRS_IOTHUBCLIENT_LL_12_025: [** If IoTHubTransport_GetDeviceTwin fails, `IoTHubClient_LL_GetDeviceTwin` shall fail and return `IOTHUB_CLIENT_ERROR`.**]**
+
+**SRS_IOTHUBCLIENT_LL_12_026: [** If no errors occur IoTHubClient_LL_GetDeviceTwin shall return `IOTHUB_CLIENT_OK`.**]**
+
+**SRS_IOTHUBCLIENT_LL_12_027: [** If the twin user context or twin callback is NULL, `IoTHubClient_GetDeviceTwin` shall return `IOTHUB_CLIENT_ERROR`. **]**
+
+### on_device_twin_report_received
+
+static void on_device_twin_report_received(IOTHUB_TRANSPORT_RESULT result, CONSTBUFFER_HANDLE data, void* callbackContext);
+
+
+Note: `userContextCallback` below refers to the callback provided in IoTHubClient_LL_GetDeviceTwin.
+
+**SRS_IOTHUBCLIENT_LL_12_027: [** If data is NULL or result is not IOTHUB_TRANSPORT_OK, `deviceTwinCallback` (user provided) shall be invoked passing DEVICE_TWIN_UPDATE_COMPLETE, NULL for `payload`, 0 for `size` and `userContextCallback`** ]**
+
+**SRS_IOTHUBCLIENT_LL_12_028: [** Otherwise `deviceTwinCallback` (user provided) shall be invoked passing DEVICE_TWIN_UPDATE_COMPLETE, `data->buffer`, `data->size` and `userContextCallback`** ]**
+
+**SRS_IOTHUBCLIENT_LL_12_029: [** If `data` is not NULL it shall be destroyed** ]**
+
 ## IoTHubClient_LL_SetDeviceMethodCallback
 
 ```c

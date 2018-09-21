@@ -58,7 +58,7 @@ static void on_umock_c_error(UMOCK_C_ERROR_CODE error_code)
     ASSERT_FAIL(temp_str);
 }
 
-#define TEST_IOTHUB_CLIENT_CORE_LL_HANDLE        ((IOTHUB_CLIENT_CORE_LL_HANDLE)0x4239)
+#define TEST_IOTHUB_CLIENT_CORE_LL_HANDLE   ((IOTHUB_CLIENT_CORE_LL_HANDLE)0x4239)
 #define TEST_IOTHUBTRANSPORT_CONFIG_HANDLE  ((IOTHUBTRANSPORT_CONFIG*)0x4240)
 #define TEST_XIO_INTERFACE                  ((const IO_INTERFACE_DESCRIPTION*)0x4247)
 #define TEST_XIO_HANDLE                     ((XIO_HANDLE)0x4248)
@@ -70,6 +70,7 @@ static void on_umock_c_error(UMOCK_C_ERROR_CODE error_code)
 #define TEST_IOTHUB_DEVICE_HANDLE           ((IOTHUB_DEVICE_HANDLE)0x4446)
 #define TEST_IOTHUB_IDENTITY_TYPE           IOTHUB_TYPE_DEVICE_TWIN
 #define TEST_IOTHUB_IDENTITY_INFO_HANDLE    ((IOTHUB_IDENTITY_INFO*)0x4449)
+#define TEST_DEVICE_TWIN_CALLBACK           ((IOTHUB_CLIENT_DEVICE_TWIN_CALLBACK)0x1234) 
 
 static IO_INTERFACE_DESCRIPTION* TEST_WSIO_INTERFACE_DESCRIPTION = (IO_INTERFACE_DESCRIPTION*)0x1182;
 static IO_INTERFACE_DESCRIPTION* TEST_TLSIO_INTERFACE_DESCRIPTION = (IO_INTERFACE_DESCRIPTION*)0x1183;
@@ -576,6 +577,7 @@ TEST_SUITE_INITIALIZE(TestClassInitialize)
     REGISTER_UMOCK_ALIAS_TYPE(PDLIST_ENTRY, void*);
     REGISTER_UMOCK_ALIAS_TYPE(IOTHUB_IDENTITY_TYPE, void*);
     REGISTER_UMOCK_ALIAS_TYPE(AMQP_GET_IO_TRANSPORT, void*);
+    REGISTER_UMOCK_ALIAS_TYPE(IOTHUB_CLIENT_DEVICE_TWIN_CALLBACK, void*);
     REGISTER_TYPE(WSIO_CONFIG*, WSIO_CONFIG_ptr);
     REGISTER_TYPE(TLSIO_CONFIG*, TLSIO_CONFIG_ptr);
     REGISTER_TYPE(HTTP_PROXY_IO_CONFIG*, HTTP_PROXY_IO_CONFIG_ptr);
@@ -955,6 +957,24 @@ TEST_FUNCTION(AMQP_Unsubscribe_DeviceTwin)
 
     // act
     provider->IoTHubTransport_Unsubscribe_DeviceTwin(TEST_IOTHUB_DEVICE_HANDLE);
+
+    // assert
+    ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
+
+    // cleanup
+}
+
+// Tests_SRS_IOTHUBTRANSPORTAMQP_WS_12_001: [IoTHubTransportAMQP_WS_GetDeviceTwin shall invoke IoTHubTransport_AMQP_Common_DeviceTwin()]
+TEST_FUNCTION(AMQP_GetDeviceTwin)
+{
+    // arrange
+    TRANSPORT_PROVIDER* provider = (TRANSPORT_PROVIDER*)AMQP_Protocol_over_WebSocketsTls();
+
+    umock_c_reset_all_calls();
+    STRICT_EXPECTED_CALL(IoTHubTransport_AMQP_Common_GetDeviceTwin(TEST_IOTHUB_DEVICE_HANDLE, TEST_DEVICE_TWIN_CALLBACK, (void*)0x5678));
+
+    // act
+    provider->IoTHubTransport_GetDeviceTwin(TEST_IOTHUB_DEVICE_HANDLE, TEST_DEVICE_TWIN_CALLBACK, (void*)0x5678);
 
     // assert
     ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());

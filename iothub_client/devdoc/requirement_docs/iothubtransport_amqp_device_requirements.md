@@ -112,6 +112,7 @@ extern int device_unsubscribe_message(DEVICE_HANDLE handle);
 extern int device_send_message_disposition(DEVICE_HANDLE device_handle, DEVICE_MESSAGE_DISPOSITION_INFO* disposition_info, DEVICE_MESSAGE_DISPOSITION_RESULT disposition_result);
 extern int device_set_retry_policy(DEVICE_HANDLE handle, IOTHUB_CLIENT_RETRY_POLICY policy, size_t retry_timeout_limit_in_seconds);
 extern int device_set_option(DEVICE_HANDLE handle, const char* name, void* value);
+extern int device_get_twin_async(AMQP_DEVICE_HANDLE handle, DEVICE_TWIN_UPDATE_RECEIVED_CALLBACK on_device_get_twin_completed_callback, void* context);
 extern OPTIONHANDLER_HANDLE device_retrieve_options(DEVICE_HANDLE handle);
 
 ```
@@ -462,6 +463,20 @@ extern OPTIONHANDLER_HANDLE device_retrieve_options(DEVICE_HANDLE handle);
 **SRS_DEVICE_09_104: [**If no failures occur, a handle to `options` shall be return**]**
 
 
+### device_unsubscribe_for_twin_updates
+```c
+extern int device_unsubscribe_for_twin_updates(DEVICE_HANDLE handle);
+```
+
+**SRS_DEVICE_09_147: [**If `handle` is NULL, device_unsubscribe_for_twin_updates shall return a non-zero result**]**
+
+**SRS_DEVICE_09_148: [**twin_messenger_unsubscribe shall be invoked passing `on_twin_state_update_callback`**]**
+
+**SRS_DEVICE_09_149: [**If twin_messenger_unsubscribe fails, device_unsubscribe_for_twin_updates shall return a non-zero value**]**
+
+**SRS_DEVICE_09_150: [**If no failures occur, device_unsubscribe_for_twin_updates shall return 0**]**
+
+
 ### device_get_send_status
 
 ```c
@@ -474,3 +489,31 @@ extern int device_get_send_status(DEVICE_HANDLE handle, DEVICE_SEND_STATUS *send
 **SRS_DEVICE_09_108: [**If telemetry_messenger_get_send_status returns TELEMETRY_MESSENGER_SEND_STATUS_IDLE, device_get_send_status return status DEVICE_SEND_STATUS_IDLE**]**
 **SRS_DEVICE_09_109: [**If telemetry_messenger_get_send_status returns TELEMETRY_MESSENGER_SEND_STATUS_BUSY, device_get_send_status return status DEVICE_SEND_STATUS_BUSY**]**
 **SRS_DEVICE_09_110: [**If device_get_send_status succeeds, it shall return zero as result**]**
+
+
+#### on_get_twin_completed
+
+```c
+static void on_get_twin_completed(TWIN_UPDATE_TYPE update_type, const char* payload, size_t size, const void* context)
+```
+
+**SRS_DEVICE_12_001: [**If `payload` or `context` is NULL `on_get_twin_completed` exits**]**
+**SRS_DEVICE_12_002: [**If `update_type` is `TWIN_UPDATE_TYPE_COMPLETE` `on_get_twin_completed` calls the given callback with `DEVICE_TWIN_UPDATE_TYPE_COMPLETE argument`  **]**
+**SRS_DEVICE_12_003: [**If `update_type` is `TWIN_UPDATE_TYPE_PARTIAL` `on_get_twin_completed` calls the given callback with `DEVICE_TWIN_UPDATE_TYPE_PARTIAL argument`  **]**
+**SRS_DEVICE_12_004: [**`on_get_twin_completed` calls the given callback with passing the `payload`, `size` and `context` argument **]**
+**SRS_DEVICE_12_005: [**The memory allocated for `context` shall be released**]**
+
+
+### device_get_twin_async
+
+```c
+extern int device_get_twin_async(AMQP_DEVICE_HANDLE handle, DEVICE_TWIN_UPDATE_RECEIVED_CALLBACK on_device_get_twin_completed_callback, void* context);
+```
+
+**SRS_DEVICE_12_006: [**If `handle` or `on_device_get_twin_completed_callback` is NULL, `device_get_twin_async` shall return a non-zero result**]**
+**SRS_DEVICE_12_007: [**`device_get_twin_async` shall allocate memory for the twin context structure**]**
+**SRS_DEVICE_12_007: [**If the memory allocation fails `device_get_twin_async` shall return a non zero result**]**
+**SRS_DEVICE_12_008: [**`device_get_twin_async` shall call `twin_messenger_get_twin_async`**]**
+**SRS_DEVICE_12_009: [**If `twin_messenger_get_twin_async` fails `device_get_twin_async` shall return a non zero value**]**
+**SRS_DEVICE_12_010: [**If `twin_messenger_get_twin_async` succeeds `device_get_twin_async` shall return RESULT_OK**]**
+

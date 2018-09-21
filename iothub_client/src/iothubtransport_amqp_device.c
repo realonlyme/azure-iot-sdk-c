@@ -70,6 +70,12 @@ typedef struct DEVICE_SEND_TWIN_UPDATE_CONTEXT_TAG
     void* context;
 } DEVICE_SEND_TWIN_UPDATE_CONTEXT;
 
+typedef struct DEVICE_GET_TWIN_CONTEXT_TAG
+{
+    DEVICE_TWIN_UPDATE_RECEIVED_CALLBACK on_get_twin_completed_callback;
+    void* context;
+} DEVICE_GET_TWIN_CONTEXT;
+
 // Internal state control
 static void update_state(AMQP_DEVICE_INSTANCE* instance, DEVICE_STATE new_state)
 {
@@ -1663,6 +1669,77 @@ int device_unsubscribe_for_twin_updates(AMQP_DEVICE_HANDLE handle)
             instance->on_device_twin_update_received_context = NULL;
             // Codes_SRS_DEVICE_09_150: [If no failures occur, device_unsubscribe_for_twin_updates shall return 0]
             result = RESULT_OK;
+        }
+    }
+
+    return result;
+}
+
+static void on_get_twin_completed(TWIN_UPDATE_TYPE update_type, const char* payload, size_t size, const void* context)
+{
+    if (payload == NULL || context == NULL)
+    {
+        /*Codes_SRS_DEVICE_12_001: [If `payload` or `context` is NULL `on_get_twin_completed` exits]*/
+        LogError("Invalid argument (context=%p, payload=%p)", context, payload);
+    }
+    else
+    {
+        DEVICE_GET_TWIN_CONTEXT* twin_ctx = (DEVICE_GET_TWIN_CONTEXT*)context;
+
+        /*Codes_SRS_DEVICE_12_002: [If `update_type` is `TWIN_UPDATE_TYPE_COMPLETE` `on_get_twin_completed` calls the given callback with `DEVICE_TWIN_UPDATE_TYPE_COMPLETE argument`  ]*/
+        /*Codes_SRS_DEVICE_12_003: [If `update_type` is `TWIN_UPDATE_TYPE_PARTIAL` `on_get_twin_completed` calls the given callback with `DEVICE_TWIN_UPDATE_TYPE_PARTIAL argument`  ]*/
+        /*Codes_SRS_DEVICE_12_004: [`on_get_twin_completed` calls the given callback with passing the `payload`, `size` and `context` argument ]*/
+        twin_ctx->on_get_twin_completed_callback(
+            update_type == TWIN_UPDATE_TYPE_COMPLETE ? DEVICE_TWIN_UPDATE_TYPE_COMPLETE : DEVICE_TWIN_UPDATE_TYPE_PARTIAL, 
+            (const unsigned char*)payload, 
+            size, 
+            twin_ctx->context);
+
+        /*Codes_SRS_DEVICE_12_005: [The memory allocated for `context` shall be released]*/
+        free(twin_ctx);
+    }
+}
+
+int device_get_twin_async(AMQP_DEVICE_HANDLE handle, DEVICE_TWIN_UPDATE_RECEIVED_CALLBACK on_device_get_twin_completed_callback, void* context)
+{
+    int result;
+
+    if (handle == NULL || on_device_get_twin_completed_callback == NULL)
+    {
+        /*Codes_SRS_DEVICE_12_006: [If `handle` or `on_device_get_twin_completed_callback` is NULL, `device_get_twin_async` shall return a non-zero result]*/
+        LogError("Invalid argument (handle=%p, on_device_get_twin_completed_callback=%p)", handle, on_device_get_twin_completed_callback);
+        result = __FAILURE__;
+    }
+    else
+    {
+        AMQP_DEVICE_INSTANCE* instance = (AMQP_DEVICE_INSTANCE*)handle;
+        DEVICE_GET_TWIN_CONTEXT* twin_ctx;
+
+        /*Codes_SRS_DEVICE_12_007: [`device_get_twin_async` shall allocate memory for the twin context structure]*/
+        if ((twin_ctx = (DEVICE_GET_TWIN_CONTEXT*)malloc(sizeof(DEVICE_GET_TWIN_CONTEXT))) == NULL)
+        {
+            /*Codes_SRS_DEVICE_12_007: [If the memory allocation fails `device_get_twin_async` shall return a non zero result]*/
+            LogError("Cannot get device twin (failed creating TWIN context)");
+            result = __FAILURE__;
+        }
+        else
+        {
+            twin_ctx->on_get_twin_completed_callback = on_device_get_twin_completed_callback;
+            twin_ctx->context = context;
+
+            /*Codes_SRS_DEVICE_12_008: [`device_get_twin_async` shall call `twin_messenger_get_twin_async`]*/
+            if (twin_messenger_get_twin_async(instance->twin_messenger_handle, on_get_twin_completed, twin_ctx) != 0)
+            {
+                /*Codes_SRS_DEVICE_12_009: [If `twin_messenger_get_twin_async` fails `device_get_twin_async` shall return a non zero value]*/
+                LogError("Failed getting device twin");
+                free(twin_ctx);
+                result = __FAILURE__;
+            }
+            else
+            {
+                /*Codes_SRS_DEVICE_12_010: [If `twin_messenger_get_twin_async` succeeds `device_get_twin_async` shall return RESULT_OK]*/
+                result = RESULT_OK;
+            }
         }
     }
 

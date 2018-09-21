@@ -83,6 +83,11 @@ IOTHUB_CLIENT_RESULT IoTHubClient_SendReportedState(IOTHUB_CLIENT_HANDLE iotHubC
     return IoTHubClientCore_SendReportedState((IOTHUB_CLIENT_CORE_HANDLE)iotHubClientHandle, reportedState, size, reportedStateCallback, userContextCallback);
 }
 
+IOTHUB_CLIENT_RESULT IoTHubClient_GetDeviceTwin(IOTHUB_CLIENT_HANDLE iotHubClientHandle)
+{
+    return IoTHubClientCore_GetDeviceTwin((IOTHUB_CLIENT_CORE_HANDLE)iotHubClientHandle);
+}
+
 IOTHUB_CLIENT_RESULT IoTHubClient_SetDeviceMethodCallback(IOTHUB_CLIENT_HANDLE iotHubClientHandle, IOTHUB_CLIENT_DEVICE_METHOD_CALLBACK_ASYNC deviceMethodCallback, void* userContextCallback)
 {
     return IoTHubClientCore_SetDeviceMethodCallback((IOTHUB_CLIENT_CORE_HANDLE)iotHubClientHandle, deviceMethodCallback, userContextCallback);

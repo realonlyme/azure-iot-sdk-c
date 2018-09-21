@@ -1778,6 +1778,59 @@ IOTHUB_CLIENT_RESULT IoTHubClientCore_SendReportedState(IOTHUB_CLIENT_CORE_HANDL
     return result;
 }
 
+IOTHUB_CLIENT_RESULT IoTHubClientCore_GetDeviceTwin(IOTHUB_CLIENT_CORE_HANDLE iotHubClientHandle)
+{
+    IOTHUB_CLIENT_RESULT result;
+
+    /*Codes_SRS_IOTHUBCLIENT_12_026: [ If `iotHubClientHandle`is `NULL`, `IoTHubClient_GetDeviceTwin` shall return `IOTHUB_CLIENT_INVALID_ARG`. ]*/
+    if (iotHubClientHandle == NULL)
+    {
+        result = IOTHUB_CLIENT_INVALID_ARG;
+        LogError("invalid arg (NULL)");
+    }
+    else
+    {
+
+        IOTHUB_CLIENT_CORE_INSTANCE* iotHubClientInstance = (IOTHUB_CLIENT_CORE_INSTANCE*)iotHubClientHandle;
+
+        /*Codes_SRS_IOTHUBCLIENT_12_027: [ If the twin user context or twin callback is NULL, `IoTHubClient_GetDeviceTwin` shall return `IOTHUB_CLIENT_ERROR`. ]*/
+        if (((iotHubClientInstance->devicetwin_user_context == NULL)) || (iotHubClientInstance->desired_state_callback == NULL))
+        {
+            result = IOTHUB_CLIENT_ERROR;
+            LogError("DeviceTwin callback has not been setup by calling IoTHubClientCore_SetDeviceTwinCallback API");
+        }
+        else
+        {
+            /*Codes_SRS_IOTHUBCLIENT_12_028: [ If the transport connection is shared, the thread shall be started by calling `IoTHubTransport_StartWorkerThread`. ]*/
+            if ((result = StartWorkerThreadIfNeeded(iotHubClientInstance)) != IOTHUB_CLIENT_OK)
+            {
+                /*Codes_SRS_IOTHUBCLIENT_12_029: [ If starting the thread fails, `IoTHubClient_GetDeviceTwin` shall return `IOTHUB_CLIENT_ERROR`. ]*/
+                result = IOTHUB_CLIENT_ERROR;
+                LogError("Could not start worker thread");
+            }
+            else
+            {
+                /*Codes_SRS_IOTHUBCLIENT_12_030: [ `IoTHubClient_GetDeviceTwin` shall be made thread-safe by using the lock created in IoTHubClient_Create. ]*/
+                if (Lock(iotHubClientInstance->LockHandle) != LOCK_OK)
+                {
+                    /*Codes_SRS_IOTHUBCLIENT_12_031: [ If acquiring the lock fails, `IoTHubClient_GetDeviceTwin` shall return `IOTHUB_CLIENT_ERROR`. ]*/
+                    result = IOTHUB_CLIENT_ERROR;
+                    LogError("Could not acquire lock");
+                }
+                else
+                {
+                    /*Codes_SRS_IOTHUBCLIENT_12_032: [ `IoTHubClient_GetDeviceTwin` shall call `IoTHubClient_LL_GetDeviceTwin`, passing the `IoTHubClient_LL handle` as argument. ]*/
+                    /*Codes_SRS_IOTHUBCLIENT_12_033: [ When `IoTHubClient_LL_GetDeviceTwin` is called, `IoTHubClient_GetDeviceTwin` shall return the result of `IoTHubClient_LL_GetDeviceTwin`. ]*/
+                    result = IoTHubClientCore_LL_GetDeviceTwin(iotHubClientInstance->IoTHubClientLLHandle);
+
+                    (void)Unlock(iotHubClientInstance->LockHandle);
+                }
+            }
+        }
+    }
+    return result;
+}
+
 IOTHUB_CLIENT_RESULT IoTHubClientCore_SetDeviceMethodCallback(IOTHUB_CLIENT_CORE_HANDLE iotHubClientHandle, IOTHUB_CLIENT_DEVICE_METHOD_CALLBACK_ASYNC deviceMethodCallback, void* userContextCallback)
 {
     IOTHUB_CLIENT_RESULT result;
