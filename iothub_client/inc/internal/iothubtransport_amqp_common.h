@@ -23,7 +23,7 @@ typedef struct AMQP_TRANSPORT_PROXY_OPTIONS_TAG
 
 typedef XIO_HANDLE(*AMQP_GET_IO_TRANSPORT)(const char* target_fqdn, const AMQP_TRANSPORT_PROXY_OPTIONS* amqp_transport_proxy_options);
 
-MOCKABLE_FUNCTION(, TRANSPORT_LL_HANDLE, IoTHubTransport_AMQP_Common_Create, const IOTHUBTRANSPORT_CONFIG*, config, AMQP_GET_IO_TRANSPORT, get_io_transport);
+MOCKABLE_FUNCTION(, TRANSPORT_LL_HANDLE, IoTHubTransport_AMQP_Common_Create, const IOTHUBTRANSPORT_CONFIG*, config, AMQP_GET_IO_TRANSPORT, get_io_transport, TRANSPORT_CALLBACKS_INFO*, cb_info, void*, ctx);
 MOCKABLE_FUNCTION(, void, IoTHubTransport_AMQP_Common_Destroy, TRANSPORT_LL_HANDLE, handle);
 MOCKABLE_FUNCTION(, int, IoTHubTransport_AMQP_Common_Subscribe, IOTHUB_DEVICE_HANDLE, handle);
 MOCKABLE_FUNCTION(, void, IoTHubTransport_AMQP_Common_Unsubscribe, IOTHUB_DEVICE_HANDLE, handle);

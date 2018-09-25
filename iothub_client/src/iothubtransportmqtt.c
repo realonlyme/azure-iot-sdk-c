@@ -43,10 +43,10 @@ static XIO_HANDLE getIoTransportProvider(const char* fully_qualified_name, const
     return result;
 }
 
-static TRANSPORT_LL_HANDLE IoTHubTransportMqtt_Create(const IOTHUBTRANSPORT_CONFIG* config)
+static TRANSPORT_LL_HANDLE IoTHubTransportMqtt_Create(const IOTHUBTRANSPORT_CONFIG* config, TRANSPORT_CALLBACKS_INFO* cb_info, void* ctx)
 {
     /* Codes_SRS_IOTHUB_MQTT_TRANSPORT_07_001: [IoTHubTransportMqtt_Create shall create a TRANSPORT_LL_HANDLE by calling into the IoTHubMqttAbstract_Create function.] */
-    return IoTHubTransport_MQTT_Common_Create(config, getIoTransportProvider);
+    return IoTHubTransport_MQTT_Common_Create(config, getIoTransportProvider, cb_info, ctx);
 }
 
 static void IoTHubTransportMqtt_Destroy(TRANSPORT_LL_HANDLE handle)

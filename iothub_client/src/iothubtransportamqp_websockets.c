@@ -104,10 +104,10 @@ static XIO_HANDLE getWebSocketsIOTransport(const char* fqdn, const AMQP_TRANSPOR
 }
 
 // API functions
-static TRANSPORT_LL_HANDLE IoTHubTransportAMQP_WS_Create(const IOTHUBTRANSPORT_CONFIG* config)
+static TRANSPORT_LL_HANDLE IoTHubTransportAMQP_WS_Create(const IOTHUBTRANSPORT_CONFIG* config, TRANSPORT_CALLBACKS_INFO* cb_info, void* ctx)
 {
     // Codes_SRS_IoTHubTransportAMQP_WS_09_001: [IoTHubTransportAMQP_WS_Create shall create a TRANSPORT_LL_HANDLE by calling into the IoTHubTransport_AMQP_Common_Create function, passing `config` and getWebSocketsIOTransport.]
-    return IoTHubTransport_AMQP_Common_Create(config, getWebSocketsIOTransport);
+    return IoTHubTransport_AMQP_Common_Create(config, getWebSocketsIOTransport, cb_info, ctx);
 }
 
 static IOTHUB_PROCESS_ITEM_RESULT IoTHubTransportAMQP_WS_ProcessItem(TRANSPORT_LL_HANDLE handle, IOTHUB_IDENTITY_TYPE item_type, IOTHUB_IDENTITY_INFO* iothub_item)

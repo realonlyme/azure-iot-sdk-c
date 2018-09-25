@@ -41,10 +41,10 @@ extern "C"
 
 typedef bool(*IOTHUB_CLIENT_MESSAGE_CALLBACK_ASYNC_EX)(MESSAGE_CALLBACK_INFO* messageData, void* userContextCallback);
 
-MOCKABLE_FUNCTION(, void, IoTHubClientCore_LL_SendComplete, IOTHUB_CLIENT_CORE_LL_HANDLE, handle, PDLIST_ENTRY, completed, IOTHUB_CLIENT_CONFIRMATION_RESULT, result);
-MOCKABLE_FUNCTION(, void, IoTHubClientCore_LL_ReportedStateComplete, IOTHUB_CLIENT_CORE_LL_HANDLE, handle, uint32_t, item_id, int, status_code);
+//MOCKABLE_FUNCTION(, void, IoTHubClientCore_LL_SendComplete, IOTHUB_CLIENT_CORE_LL_HANDLE, handle, PDLIST_ENTRY, completed, IOTHUB_CLIENT_CONFIRMATION_RESULT, result);
+//MOCKABLE_FUNCTION(, void, IoTHubClientCore_LL_ReportedStateComplete, IOTHUB_CLIENT_CORE_LL_HANDLE, handle, uint32_t, item_id, int, status_code);
 MOCKABLE_FUNCTION(, bool, IoTHubClientCore_LL_MessageCallback, IOTHUB_CLIENT_CORE_LL_HANDLE, handle, MESSAGE_CALLBACK_INFO*, message_data);
-MOCKABLE_FUNCTION(, void, IoTHubClientCore_LL_RetrievePropertyComplete, IOTHUB_CLIENT_CORE_LL_HANDLE, handle, DEVICE_TWIN_UPDATE_STATE, update_state, const unsigned char*, payLoad, size_t, size);
+//MOCKABLE_FUNCTION(, void, IoTHubClientCore_LL_RetrievePropertyComplete, IOTHUB_CLIENT_CORE_LL_HANDLE, handle, DEVICE_TWIN_UPDATE_STATE, update_state, const unsigned char*, payLoad, size_t, size);
 MOCKABLE_FUNCTION(, int, IoTHubClientCore_LL_DeviceMethodComplete, IOTHUB_CLIENT_CORE_LL_HANDLE, handle, const char*, method_name, const unsigned char*, payLoad, size_t, size, METHOD_HANDLE, response_id);
 MOCKABLE_FUNCTION(, void, IoTHubClientCore_LL_ConnectionStatusCallBack, IOTHUB_CLIENT_CORE_LL_HANDLE, handle, IOTHUB_CLIENT_CONNECTION_STATUS, status, IOTHUB_CLIENT_CONNECTION_STATUS_REASON, reason);
 MOCKABLE_FUNCTION(, IOTHUB_CLIENT_RESULT, IoTHubClientCore_LL_SetMessageCallback_Ex, IOTHUB_CLIENT_CORE_LL_HANDLE, iotHubClientHandle, IOTHUB_CLIENT_MESSAGE_CALLBACK_ASYNC_EX, messageCallback, void*, userContextCallback);

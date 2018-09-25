@@ -226,6 +226,9 @@ typedef struct MQTTTRANSPORT_HANDLE_DATA_TAG
     // with either SAS Token, x509 Certs, and Device SAS Token
     IOTHUB_AUTHORIZATION_HANDLE authorization_module;
 
+    TRANSPORT_CALLBACKS_INFO transport_callbacks;
+    void* transport_ctx;
+
     char* http_proxy_hostname;
     int http_proxy_port;
     char* http_proxy_username;
@@ -396,6 +399,29 @@ static const char* retrieve_mqtt_return_codes(CONNECT_RETURN_CODE rtn_code)
     }
 }
 #endif // NO_LOGGING
+
+static int validate_transport_callbacks(const TRANSPORT_CALLBACKS_INFO* transport_cb)
+{
+    int result;
+    if (
+        transport_cb->connection_status_cb == NULL || 
+        transport_cb->msg_input_cb == NULL ||
+        transport_cb->msg_cb == NULL ||
+        transport_cb->send_complete_cb == NULL ||
+        transport_cb->prod_info_cb == NULL ||
+        transport_cb->twin_rpt_state_complete_cb == NULL ||
+        transport_cb->twin_retrieve_prop_complete_cb == NULL ||
+        transport_cb->method_complete_cb == NULL
+       )
+    {
+        result = __FAILURE__;
+    }
+    else
+    {
+        result = 0;
+    }
+    return result;
+}
 
 static int retrieve_device_method_rid_info(const char* resp_topic, STRING_HANDLE method_name, STRING_HANDLE request_id)
 {
@@ -581,7 +607,7 @@ static void sendMsgComplete(IOTHUB_MESSAGE_LIST* iothubMsgList, PMQTTTRANSPORT_H
     DLIST_ENTRY messageCompleted;
     DList_InitializeListHead(&messageCompleted);
     DList_InsertTailList(&messageCompleted, &(iothubMsgList->entry));
-    IoTHubClientCore_LL_SendComplete(transport_data->llClientHandle, &messageCompleted, confirmResult);
+    transport_data->transport_callbacks.send_complete_cb(&messageCompleted, confirmResult, transport_data->transport_ctx);
 }
 
 static int addUserPropertiesTouMqttMessage(IOTHUB_MESSAGE_HANDLE iothub_message_handle, STRING_HANDLE topic_string, size_t* index_ptr, bool urlencode)
@@ -1407,7 +1433,7 @@ static void mqtt_notification_callback(MQTT_MESSAGE_HANDLE msgHandle, void* call
                     const APP_PAYLOAD* payload = mqttmessage_getApplicationMsg(msgHandle);
                     if (notification_msg)
                     {
-                        IoTHubClientCore_LL_RetrievePropertyComplete(transportData->llClientHandle, DEVICE_TWIN_UPDATE_PARTIAL, payload->message, payload->length);
+                        transportData->transport_callbacks.twin_retrieve_prop_complete_cb(DEVICE_TWIN_UPDATE_PARTIAL, payload->message, payload->length, transportData->transport_ctx);
                     }
                     else
                     {
@@ -1423,14 +1449,14 @@ static void mqtt_notification_callback(MQTT_MESSAGE_HANDLE msgHandle, void* call
                                 if (msg_entry->device_twin_msg_type == RETRIEVE_PROPERTIES)
                                 {
                                     /* Codes_SRS_IOTHUB_MQTT_TRANSPORT_07_054: [ If type is IOTHUB_TYPE_DEVICE_TWIN, then on success if msg_type is RETRIEVE_PROPERTIES then mqtt_notification_callback shall call IoTHubClientCore_LL_RetrievePropertyComplete... ] */
-                                    IoTHubClientCore_LL_RetrievePropertyComplete(transportData->llClientHandle, DEVICE_TWIN_UPDATE_COMPLETE, payload->message, payload->length);
+                                    transportData->transport_callbacks.twin_retrieve_prop_complete_cb(DEVICE_TWIN_UPDATE_COMPLETE, payload->message, payload->length, transportData->transport_ctx);
                                     // Only after receiving device twin request should we start listening for patches.
                                     (void)subscribeToNotifyStateIfNeeded(transportData);
                                 }
                                 else
                                 {
                                     /* Codes_SRS_IOTHUB_MQTT_TRANSPORT_07_055: [ if device_twin_msg_type is not RETRIEVE_PROPERTIES then mqtt_notification_callback shall call IoTHubClientCore_LL_ReportedStateComplete ] */
-                                    IoTHubClientCore_LL_ReportedStateComplete(transportData->llClientHandle, msg_entry->iothub_msg_id, status_code);
+                                    transportData->transport_callbacks.twin_rpt_state_complete_cb(msg_entry->iothub_msg_id, status_code, transportData->transport_ctx);
                                 }
                                 free(msg_entry);
                                 break;
@@ -1472,7 +1498,7 @@ static void mqtt_notification_callback(MQTT_MESSAGE_HANDLE msgHandle, void* call
                         {
                             /* CodesSRS_IOTHUB_MQTT_TRANSPORT_07_053: [ If type is IOTHUB_TYPE_DEVICE_METHODS, then on success mqtt_notification_callback shall call IoTHubClientCore_LL_DeviceMethodComplete. ] */
                             const APP_PAYLOAD* payload = mqttmessage_getApplicationMsg(msgHandle);
-                            if (IoTHubClientCore_LL_DeviceMethodComplete(transportData->llClientHandle, STRING_c_str(method_name), payload->message, payload->length, (void*)dev_method_info) != 0)
+                            if (transportData->transport_callbacks.method_complete_cb(STRING_c_str(method_name), payload->message, payload->length, (void*)dev_method_info, transportData->transport_ctx) != 0)
                             {
                                 LogError("Failure: IoTHubClientCore_LL_DeviceMethodComplete");
                                 STRING_delete(dev_method_info->request_id);
@@ -1517,7 +1543,7 @@ static void mqtt_notification_callback(MQTT_MESSAGE_HANDLE msgHandle, void* call
                             if (type == IOTHUB_TYPE_EVENT_QUEUE)
                             {
                                 // Codes_SRS_IOTHUB_MQTT_TRANSPORT_31_065: [ If type is IOTHUB_TYPE_TELEMETRY and sent to an input queue, then on success `mqtt_notification_callback` shall call `IoTHubClient_LL_MessageCallback`. ]
-                                if (!IoTHubClientCore_LL_MessageCallbackFromInput(transportData->llClientHandle, messageData))
+                                if (!transportData->transport_callbacks.msg_input_cb(messageData, transportData->transport_ctx))
                                 {
                                     LogError("IoTHubClientCore_LL_MessageCallbackreturned false");
 
@@ -1528,7 +1554,7 @@ static void mqtt_notification_callback(MQTT_MESSAGE_HANDLE msgHandle, void* call
                             else
                             {
                                 /* Codes_SRS_IOTHUB_MQTT_TRANSPORT_07_056: [ If type is IOTHUB_TYPE_TELEMETRY, then on success mqtt_notification_callback shall call IoTHubClientCore_LL_MessageCallback. ] */
-                                if (!IoTHubClientCore_LL_MessageCallback(transportData->llClientHandle, messageData))
+                                if (!transportData->transport_callbacks.msg_cb(messageData, transportData->transport_ctx))
                                 {
                                     LogError("IoTHubClientCore_LL_MessageCallback returned false");
                                     IoTHubMessage_Destroy(IoTHubMessage);
@@ -1595,22 +1621,22 @@ static void mqtt_operation_complete_callback(MQTT_CLIENT_HANDLE handle, MQTT_CLI
                         // Codes_SRS_IOTHUB_TRANSPORT_MQTT_COMMON_09_008: [ Upon successful connection the retry control shall be reset using retry_control_reset() ]
                         retry_control_reset(transport_data->retry_control_handle);
 
-                        IoTHubClientCore_LL_ConnectionStatusCallBack(transport_data->llClientHandle, IOTHUB_CLIENT_CONNECTION_AUTHENTICATED, IOTHUB_CLIENT_CONNECTION_OK);
+                        transport_data->transport_callbacks.connection_status_cb(IOTHUB_CLIENT_CONNECTION_AUTHENTICATED, IOTHUB_CLIENT_CONNECTION_OK, transport_data->transport_ctx);
                     }
                     else
                     {
                         if (connack->returnCode == CONN_REFUSED_SERVER_UNAVAIL)
                         {
-                            IoTHubClientCore_LL_ConnectionStatusCallBack(transport_data->llClientHandle, IOTHUB_CLIENT_CONNECTION_UNAUTHENTICATED, IOTHUB_CLIENT_CONNECTION_DEVICE_DISABLED);
+                            transport_data->transport_callbacks.connection_status_cb(IOTHUB_CLIENT_CONNECTION_UNAUTHENTICATED, IOTHUB_CLIENT_CONNECTION_DEVICE_DISABLED, transport_data->transport_ctx);
                         }
                         else if (connack->returnCode == CONN_REFUSED_BAD_USERNAME_PASSWORD || connack->returnCode == CONN_REFUSED_ID_REJECTED)
                         {
                             transport_data->isRecoverableError = false;
-                            IoTHubClientCore_LL_ConnectionStatusCallBack(transport_data->llClientHandle, IOTHUB_CLIENT_CONNECTION_UNAUTHENTICATED, IOTHUB_CLIENT_CONNECTION_BAD_CREDENTIAL);
+                            transport_data->transport_callbacks.connection_status_cb(IOTHUB_CLIENT_CONNECTION_UNAUTHENTICATED, IOTHUB_CLIENT_CONNECTION_BAD_CREDENTIAL, transport_data->transport_ctx);
                         }
                         else if (connack->returnCode == CONN_REFUSED_NOT_AUTHORIZED)
                         {
-                            IoTHubClientCore_LL_ConnectionStatusCallBack(transport_data->llClientHandle, IOTHUB_CLIENT_CONNECTION_UNAUTHENTICATED, IOTHUB_CLIENT_CONNECTION_DEVICE_DISABLED);
+                            transport_data->transport_callbacks.connection_status_cb(IOTHUB_CLIENT_CONNECTION_UNAUTHENTICATED, IOTHUB_CLIENT_CONNECTION_DEVICE_DISABLED, transport_data->transport_ctx);
                         }
                         else if (connack->returnCode == CONN_REFUSED_UNACCEPTABLE_VERSION)
                         {
@@ -2401,16 +2427,16 @@ static PMQTTTRANSPORT_HANDLE_DATA InitializeTransportHandleData(const IOTHUB_CLI
     return state;
 }
 
-TRANSPORT_LL_HANDLE IoTHubTransport_MQTT_Common_Create(const IOTHUBTRANSPORT_CONFIG* config, MQTT_GET_IO_TRANSPORT get_io_transport)
+TRANSPORT_LL_HANDLE IoTHubTransport_MQTT_Common_Create(const IOTHUBTRANSPORT_CONFIG* config, MQTT_GET_IO_TRANSPORT get_io_transport, TRANSPORT_CALLBACKS_INFO* cb_info, void* ctx)
 {
     PMQTTTRANSPORT_HANDLE_DATA result;
     size_t deviceIdSize;
 
     /* Codes_SRS_IOTHUB_MQTT_TRANSPORT_07_001: [If parameter config is NULL then IoTHubTransport_MQTT_Common_Create shall return NULL.] */
     /* Codes_SRS_IOTHUB_TRANSPORT_MQTT_COMMON_07_041: [ if get_io_transport is NULL then IoTHubTransport_MQTT_Common_Create shall return NULL. ] */
-    if (config == NULL || get_io_transport == NULL)
+    if (config == NULL || get_io_transport == NULL || cb_info == NULL)
     {
-        LogError("Invalid Argument: Config Parameter is NULL.");
+        LogError("Invalid Argument config: %p, get_io_transport: %p, cb_info: %p", config, get_io_transport, cb_info);
         result = NULL;
     }
     /* Codes_SRS_IOTHUB_MQTT_TRANSPORT_07_002: [If the parameter config's variables upperConfig, auth_module_handle or waitingToSend are NULL then IoTHubTransport_MQTT_Common_Create shall return NULL.] */
@@ -2463,6 +2489,11 @@ TRANSPORT_LL_HANDLE IoTHubTransport_MQTT_Common_Create(const IOTHUBTRANSPORT_CON
         LogError("Invalid Argument: iotHubName is empty");
         result = NULL;
     }
+    else if (validate_transport_callbacks(cb_info) != 0)
+    {
+        LogError("failure checking transport callbacks");
+        result = NULL;
+    }
     else
     {
         result = InitializeTransportHandleData(config->upperConfig, config->waitingToSend, config->auth_module_handle, config->moduleId);
@@ -2472,6 +2503,17 @@ TRANSPORT_LL_HANDLE IoTHubTransport_MQTT_Common_Create(const IOTHUBTRANSPORT_CON
             result->http_proxy_hostname = NULL;
             result->http_proxy_username = NULL;
             result->http_proxy_password = NULL;
+
+            result->transport_ctx = ctx;
+            result->transport_callbacks.msg_input_cb = cb_info->msg_input_cb;
+            result->transport_callbacks.msg_cb = cb_info->msg_cb;
+            result->transport_callbacks.connection_status_cb = cb_info->connection_status_cb;
+            result->transport_callbacks.send_complete_cb = cb_info->send_complete_cb;
+            result->transport_callbacks.prod_info_cb = cb_info->prod_info_cb;
+            result->transport_callbacks.twin_rpt_state_complete_cb = cb_info->twin_rpt_state_complete_cb;
+            result->transport_callbacks.twin_retrieve_prop_complete_cb = cb_info->twin_retrieve_prop_complete_cb;
+            result->transport_callbacks.method_complete_cb = cb_info->method_complete_cb;
+
         }
     }
     /* Codes_SRS_IOTHUB_MQTT_TRANSPORT_07_009: [If any error is encountered then IoTHubTransport_MQTT_Common_Create shall return NULL.] */
@@ -2501,7 +2543,7 @@ void IoTHubTransport_MQTT_Common_Destroy(TRANSPORT_LL_HANDLE handle)
         {
             PDLIST_ENTRY currentEntry = DList_RemoveHeadList(&transport_data->ack_waiting_queue);
             MQTT_DEVICE_TWIN_ITEM* mqtt_device_twin = containingRecord(currentEntry, MQTT_DEVICE_TWIN_ITEM, entry);
-            IoTHubClientCore_LL_ReportedStateComplete(transport_data->llClientHandle, mqtt_device_twin->iothub_msg_id, STATUS_CODE_TIMEOUT_VALUE);
+            transport_data->transport_callbacks.twin_rpt_state_complete_cb(mqtt_device_twin->iothub_msg_id, STATUS_CODE_TIMEOUT_VALUE, transport_data->transport_ctx);
             free(mqtt_device_twin);
         }
 

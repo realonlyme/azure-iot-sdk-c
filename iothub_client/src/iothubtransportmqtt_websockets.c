@@ -101,9 +101,9 @@ static XIO_HANDLE getWebSocketsIOTransport(const char* fully_qualified_name, con
 }
 
 /* Codes_SRS_IOTHUB_MQTT_WEBSOCKET_TRANSPORT_07_001: [ IoTHubTransportMqtt_WS_Create shall create a TRANSPORT_LL_HANDLE by calling into the IoTHubMqttAbstract_Create function. ] */
-static TRANSPORT_LL_HANDLE IoTHubTransportMqtt_WS_Create(const IOTHUBTRANSPORT_CONFIG* config)
+static TRANSPORT_LL_HANDLE IoTHubTransportMqtt_WS_Create(const IOTHUBTRANSPORT_CONFIG* config, TRANSPORT_CALLBACKS_INFO* cb_info, void* ctx)
 {
-    return IoTHubTransport_MQTT_Common_Create(config, getWebSocketsIOTransport);
+    return IoTHubTransport_MQTT_Common_Create(config, getWebSocketsIOTransport, cb_info, ctx);
 }
 
 /* Codes_SRS_IOTHUB_MQTT_WEBSOCKET_TRANSPORT_07_002: [ IoTHubTransportMqtt_WS_Destroy shall destroy the TRANSPORT_LL_HANDLE by calling into the IoTHubMqttAbstract_Destroy function. ] */

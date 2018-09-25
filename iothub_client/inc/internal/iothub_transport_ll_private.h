@@ -31,6 +31,15 @@ extern "C"
 {
 #endif
 
+    typedef bool (*pfTransport_MessageCallbackFromInput)(MESSAGE_CALLBACK_INFO* messageData, void* ctx);
+    typedef bool (*pfTransport_MessageCallback)(MESSAGE_CALLBACK_INFO* messageData, void* ctx);
+    typedef void (*pfTransport_ConnectionStatusCallBack)(IOTHUB_CLIENT_CONNECTION_STATUS status, IOTHUB_CLIENT_CONNECTION_STATUS_REASON reason, void* ctx);
+    typedef void (*pfTransport_SendComplete_Callback)(PDLIST_ENTRY completed, IOTHUB_CLIENT_CONFIRMATION_RESULT result, void* ctx);
+    typedef const char* (*pfTransport_GetOption_Product_Info_Callback)(void* ctx);
+    typedef void (*pfTransport_Twin_ReportedStateComplete_Callback)(uint32_t item_id, int status_code, void* ctx);
+    typedef void (*pfTransport_Twin_RetrievePropertyComplete_Callback)(DEVICE_TWIN_UPDATE_STATE update_state, const unsigned char* payLoad, size_t size, void* ctx);
+    typedef int (*pfTransport_DeviceMethod_Complete_Callback)(const char* method_name, const unsigned char* payLoad, size_t size, METHOD_HANDLE response_id, void* ctx);
+
     /** @brief    This struct captures device configuration. */
     typedef struct IOTHUB_DEVICE_CONFIG_TAG
     {
@@ -49,9 +58,21 @@ extern "C"
         const char* moduleId;
     } IOTHUB_DEVICE_CONFIG;
 
+    typedef struct TRANSPORT_CALLBACKS_INFO_TAG
+    {
+        pfTransport_MessageCallbackFromInput msg_input_cb;
+        pfTransport_MessageCallback msg_cb;
+        pfTransport_ConnectionStatusCallBack connection_status_cb;
+        pfTransport_SendComplete_Callback send_complete_cb;
+        pfTransport_GetOption_Product_Info_Callback prod_info_cb;
+        pfTransport_Twin_ReportedStateComplete_Callback twin_rpt_state_complete_cb;
+        pfTransport_Twin_RetrievePropertyComplete_Callback twin_retrieve_prop_complete_cb;
+        pfTransport_DeviceMethod_Complete_Callback method_complete_cb;
+    } TRANSPORT_CALLBACKS_INFO;
+
     typedef STRING_HANDLE (*pfIoTHubTransport_GetHostname)(TRANSPORT_LL_HANDLE handle);
     typedef IOTHUB_CLIENT_RESULT(*pfIoTHubTransport_SetOption)(TRANSPORT_LL_HANDLE handle, const char *optionName, const void* value);
-    typedef TRANSPORT_LL_HANDLE(*pfIoTHubTransport_Create)(const IOTHUBTRANSPORT_CONFIG* config);
+    typedef TRANSPORT_LL_HANDLE(*pfIoTHubTransport_Create)(const IOTHUBTRANSPORT_CONFIG* config, TRANSPORT_CALLBACKS_INFO* cb_info, void* ctx);
     typedef void (*pfIoTHubTransport_Destroy)(TRANSPORT_LL_HANDLE handle);
     typedef IOTHUB_DEVICE_HANDLE(*pfIotHubTransport_Register)(TRANSPORT_LL_HANDLE handle, const IOTHUB_DEVICE_CONFIG* device, IOTHUB_CLIENT_LL_HANDLE iotHubClientHandle, PDLIST_ENTRY waitingToSend);
     typedef void(*pfIotHubTransport_Unregister)(IOTHUB_DEVICE_HANDLE deviceHandle);

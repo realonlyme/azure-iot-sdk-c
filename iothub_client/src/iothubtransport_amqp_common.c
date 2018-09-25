@@ -123,6 +123,9 @@ typedef struct AMQP_TRANSPORT_INSTANCE_TAG
 
                                                                         // Auth module used to generating handle authorization
     IOTHUB_AUTHORIZATION_HANDLE authorization_module;                   // with either SAS Token, x509 Certs, and Device SAS Token
+
+    TRANSPORT_CALLBACKS_INFO transport_callbacks;
+    void* transport_ctx;
 } AMQP_TRANSPORT_INSTANCE;
 
 typedef struct AMQP_TRANSPORT_DEVICE_INSTANCE_TAG
@@ -143,6 +146,9 @@ typedef struct AMQP_TRANSPORT_DEVICE_INSTANCE_TAG
     bool subscribe_methods_needed;                                       // Indicates if should subscribe for device methods.
     // is the transport subscribed for methods?
     bool subscribed_for_methods;                                         // Indicates if device is subscribed for device methods.
+
+    TRANSPORT_CALLBACKS_INFO transport_callbacks;
+    void* transport_ctx;
 } AMQP_TRANSPORT_DEVICE_INSTANCE;
 
 typedef struct MESSAGE_DISPOSITION_CONTEXT_TAG
@@ -155,7 +161,8 @@ typedef struct MESSAGE_DISPOSITION_CONTEXT_TAG
 typedef struct AMQP_TRANSPORT_DEVICE_TWIN_CONTEXT_TAG
 {
     uint32_t item_id;
-    IOTHUB_CLIENT_CORE_LL_HANDLE client_handle;
+    TRANSPORT_CALLBACKS_INFO transport_callbacks;
+    void* transport_ctx;
 } AMQP_TRANSPORT_DEVICE_TWIN_CONTEXT;
 
 
@@ -211,6 +218,28 @@ static void reset_retry_control(AMQP_TRANSPORT_DEVICE_INSTANCE* registered_devic
     retry_control_reset(registered_device->transport_instance->connection_retry_control);
 }
 
+static int validate_transport_callbacks(const TRANSPORT_CALLBACKS_INFO* transport_cb)
+{
+    int result;
+    if (
+        transport_cb->connection_status_cb == NULL ||
+        transport_cb->msg_input_cb == NULL ||
+        transport_cb->msg_cb == NULL ||
+        transport_cb->send_complete_cb == NULL ||
+        transport_cb->prod_info_cb == NULL ||
+        transport_cb->twin_rpt_state_complete_cb == NULL ||
+        transport_cb->twin_retrieve_prop_complete_cb == NULL ||
+        transport_cb->method_complete_cb == NULL
+        )
+    {
+        result = __FAILURE__;
+    }
+    else
+    {
+        result = 0;
+    }
+    return result;
+}
 
 // ---------- Register/Unregister Helpers ---------- //
 
@@ -569,7 +598,7 @@ static void on_device_send_twin_update_complete_callback(DEVICE_TWIN_UPDATE_RESU
         AMQP_TRANSPORT_DEVICE_TWIN_CONTEXT* dev_twin_ctx = (AMQP_TRANSPORT_DEVICE_TWIN_CONTEXT*)context;
 
         // Codes_SRS_IOTHUBTRANSPORT_AMQP_COMMON_09_152: [`IoTHubClientCore_LL_ReportedStateComplete` shall be invoked passing `status_code` and `context` details]
-        IoTHubClientCore_LL_ReportedStateComplete(dev_twin_ctx->client_handle, dev_twin_ctx->item_id, status_code);
+        dev_twin_ctx->transport_callbacks.twin_rpt_state_complete_cb(dev_twin_ctx->item_id, status_code, dev_twin_ctx->transport_ctx);
 
         // Codes_SRS_IOTHUBTRANSPORT_AMQP_COMMON_09_153: [The memory allocated for `context` shall be released]
         free(dev_twin_ctx);
@@ -589,10 +618,11 @@ static void on_device_twin_update_received_callback(DEVICE_TWIN_UPDATE_TYPE upda
 
         // Codes_SRS_IOTHUBTRANSPORT_AMQP_COMMON_09_138: [If `update_type` is DEVICE_TWIN_UPDATE_TYPE_PARTIAL IoTHubClientCore_LL_RetrievePropertyComplete shall be invoked passing `context` as handle, `DEVICE_TWIN_UPDATE_PARTIAL`, `payload` and `size`.]
         // Codes_SRS_IOTHUBTRANSPORT_AMQP_COMMON_09_139: [If `update_type` is DEVICE_TWIN_UPDATE_TYPE_COMPLETE IoTHubClientCore_LL_RetrievePropertyComplete shall be invoked passing `context` as handle, `DEVICE_TWIN_UPDATE_COMPLETE`, `payload` and `size`.]
-        IoTHubClientCore_LL_RetrievePropertyComplete(
-            registered_device->iothub_client_handle,
+        registered_device->transport_instance->transport_callbacks.twin_retrieve_prop_complete_cb((update_type == DEVICE_TWIN_UPDATE_TYPE_COMPLETE ? DEVICE_TWIN_UPDATE_COMPLETE : DEVICE_TWIN_UPDATE_PARTIAL),
+                message, length, registered_device->transport_instance->transport_ctx);
+            /*registered_device->iothub_client_handle,
             (update_type == DEVICE_TWIN_UPDATE_TYPE_COMPLETE ? DEVICE_TWIN_UPDATE_COMPLETE : DEVICE_TWIN_UPDATE_PARTIAL),
-            message, length);
+            message, length);*/
     }
 }
 
@@ -1384,7 +1414,7 @@ static void destroy_device_message_disposition_info(DEVICE_MESSAGE_DISPOSITION_I
 
 // ---------- API functions ---------- //
 
-TRANSPORT_LL_HANDLE IoTHubTransport_AMQP_Common_Create(const IOTHUBTRANSPORT_CONFIG* config, AMQP_GET_IO_TRANSPORT get_io_transport)
+TRANSPORT_LL_HANDLE IoTHubTransport_AMQP_Common_Create(const IOTHUBTRANSPORT_CONFIG* config, AMQP_GET_IO_TRANSPORT get_io_transport, TRANSPORT_CALLBACKS_INFO* cb_info, void* ctx)
 {
     TRANSPORT_LL_HANDLE result;
 
@@ -1399,6 +1429,11 @@ TRANSPORT_LL_HANDLE IoTHubTransport_AMQP_Common_Create(const IOTHUBTRANSPORT_CON
     {
         LogError("Failed to create the AMQP transport common instance (NULL parameter received: protocol=%p, iotHubName=%p, iotHubSuffix=%p)",
             config->upperConfig->protocol, config->upperConfig->iotHubName, config->upperConfig->iotHubSuffix);
+        result = NULL;
+    }
+    else if (validate_transport_callbacks(cb_info) != 0)
+    {
+        LogError("failure checking transport callbacks");
         result = NULL;
     }
     else
@@ -1456,6 +1491,9 @@ TRANSPORT_LL_HANDLE IoTHubTransport_AMQP_Common_Create(const IOTHUBTRANSPORT_CON
                 // Codes_SRS_IOTHUBTRANSPORT_AMQP_COMMON_99_001: [The remote idle timeout ratio shall be set to 0.5 using connection_set_remote_idle_timeout_empty_frame_send_ratio()]
                 instance->cl2svc_keep_alive_send_ratio = DEFAULT_REMOTE_IDLE_PING_RATIO;
 
+                instance->transport_ctx = ctx;
+                instance->transport_callbacks.send_complete_cb = cb_info->send_complete_cb;
+
                 // Codes_SRS_IOTHUBTRANSPORT_AMQP_COMMON_09_012: [If IoTHubTransport_AMQP_Common_Create succeeds it shall return a pointer to `instance`.]
                 result = (TRANSPORT_LL_HANDLE)instance;
             }
@@ -1494,9 +1532,12 @@ IOTHUB_PROCESS_ITEM_RESULT IoTHubTransport_AMQP_Common_ProcessItem(TRANSPORT_LL_
             }
             else
             {
+                AMQP_TRANSPORT_INSTANCE* transport_instance = (AMQP_TRANSPORT_INSTANCE*)handle;
+
                 AMQP_TRANSPORT_DEVICE_INSTANCE* registered_device = (AMQP_TRANSPORT_DEVICE_INSTANCE*)iothub_item->device_twin->device_handle;
 
-                dev_twin_ctx->client_handle = iothub_item->device_twin->client_handle;
+                dev_twin_ctx->transport_callbacks = transport_instance->transport_callbacks;
+                dev_twin_ctx->transport_ctx = transport_instance->transport_ctx;
                 dev_twin_ctx->item_id = iothub_item->device_twin->item_id;
 
                 // Codes_SRS_IOTHUBTRANSPORT_AMQP_COMMON_09_146: [device_send_twin_update_async() shall be invoked passing `iothub_item->device_twin->report_data_handle` and `on_device_send_twin_update_complete_callback`]

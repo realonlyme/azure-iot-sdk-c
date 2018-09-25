@@ -72,7 +72,7 @@ TRANSPORT_HANDLE IoTHubTransport_Create(IOTHUB_CLIENT_TRANSPORT_PROVIDER protoco
             transportLLConfig.waitingToSend = NULL;
 
             /*Codes_SRS_IOTHUBTRANSPORT_17_005: [ IoTHubTransport_Create shall create the lower layer transport by calling the protocol's IoTHubTransport_Create function. ]*/
-            result->transportLLHandle = transportProtocol->IoTHubTransport_Create(&transportLLConfig);
+            result->transportLLHandle = transportProtocol->IoTHubTransport_Create(&transportLLConfig, NULL, NULL);
             if (result->transportLLHandle == NULL)
             {
                 /*Codes_SRS_IOTHUBTRANSPORT_17_006: [ If the creation of the transport fails, IoTHubTransport_Create shall return NULL. ]*/
