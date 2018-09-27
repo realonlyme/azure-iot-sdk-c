@@ -145,7 +145,10 @@ static int create_and_execute_dps(const char* dps_id_scope, PROV_DEVICE_TRANSPOR
     }
     else
     {
-        if (Prov_Device_LL_Register_Device(handle, dps_register_device_callback, &iothub_mgr, NULL, NULL) != PROV_DEVICE_RESULT_OK)
+        bool traceOn = true;
+        Prov_Device_LL_SetOption(handle, PROV_OPTION_LOG_TRACE, &traceOn);
+
+        if (Prov_Device_LL_Register_Device(handle, dps_register_device_callback, iothub_mgr, NULL, NULL) != PROV_DEVICE_RESULT_OK)
         {
             (void)printf("failed calling Prov_Device_LL_Register_Device\r\n");
             result = __FAILURE__;
@@ -162,6 +165,10 @@ static int create_and_execute_dps(const char* dps_id_scope, PROV_DEVICE_TRANSPOR
         if (iothub_mgr->device_id == NULL || iothub_mgr->iothub_uri == NULL || iothub_mgr->op_state == STATE_ERROR)
         {
             result = __FAILURE__;
+        }
+        else
+        {
+            result = 0;
         }
     }
     return result;
@@ -195,23 +202,9 @@ IOTHUB_DEVICE_CLIENT_LL_HANDLE IoThub_Mgr_CreateClient(const char* dps_id_scope,
     return result;
 }
 
-IOTHUB_DEVICE_CLIENT_LL_HANDLE IoThub_Mgr_CreateClientAsync(const char* dps_id_scope, IOTHUB_CLIENT_TRANSPORT_PROVIDER protocol)
-{
-    IOTHUB_DEVICE_CLIENT_LL_HANDLE result;
-    if (dps_id_scope == NULL)
-    {
-        result = NULL;
-    }
-    else
-    {
-        // Connect to DPS
-        result = NULL;
-    }
-    return result;
-}
-
 IOTHUB_DEVICE_CLIENT_HANDLE IoThub_Mgr_CreateConvenienceClient(const char* dps_id_scope, IOTHUB_CLIENT_TRANSPORT_PROVIDER protocol)
 {
+    (void)protocol;
     IOTHUB_DEVICE_CLIENT_HANDLE result;
     if (dps_id_scope == NULL)
     {
@@ -225,9 +218,12 @@ IOTHUB_DEVICE_CLIENT_HANDLE IoThub_Mgr_CreateConvenienceClient(const char* dps_i
     return result; 
 }
 
-IOTHUB_DEVICE_CLIENT_HANDLE IoThub_Mgr_CreateConvenienceClientAsync(const char* dps_id_scope, IOTHUB_CLIENT_TRANSPORT_PROVIDER protocol)
+IOTHUB_CLIENT_MGR_HANDLE IoThub_Mgr_CreateConvenienceClientAsync(const char* dps_id_scope, IOTHUB_CLIENT_TRANSPORT_PROVIDER protocol, IoTHub_Mgr_Convenience_Handle_callback device_handle_cb, void* user_ctx)
 {
-    IOTHUB_DEVICE_CLIENT_HANDLE result;
+    (void)protocol;
+    (void)device_handle_cb;
+    (void)user_ctx;
+    IOTHUB_CLIENT_MGR_HANDLE result;
     if (dps_id_scope == NULL)
     {
         result = NULL;
@@ -238,4 +234,27 @@ IOTHUB_DEVICE_CLIENT_HANDLE IoThub_Mgr_CreateConvenienceClientAsync(const char* 
         result = NULL;
     }
     return result;
+}
+
+IOTHUB_CLIENT_MGR_HANDLE IoThub_Mgr_CreateClientAsync(const char* dps_id_scope, IOTHUB_CLIENT_TRANSPORT_PROVIDER protocol, IoTHub_Mgr_Device_Handle_callback device_handle_cb, void* user_ctx)
+{
+    (void)protocol;
+    (void)device_handle_cb;
+    (void)user_ctx;
+    IOTHUB_CLIENT_MGR_HANDLE result;
+    if (dps_id_scope == NULL)
+    {
+        result = NULL;
+    }
+    else
+    {
+        // Connect to DPS
+        result = NULL;
+    }
+    return result;
+}
+
+void IoThub_Mgr_DoWork(IOTHUB_CLIENT_MGR_HANDLE handle)
+{
+    (void)handle;
 }

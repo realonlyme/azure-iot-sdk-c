@@ -61,3 +61,7 @@ if (${use_amqp})
     target_link_libraries(iothub_client_manager prov_amqp_ws_transport prov_amqp_transport iothub_client_amqp_transport)
     linkUAMQP(iothub_client_manager)
 endif()
+
+if (NOT ${skip_samples})
+  add_subdirectory(samples)
+endif()

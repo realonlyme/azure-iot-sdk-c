@@ -20,6 +20,7 @@
 #include "iothub_client_options.h"
 #include "azure_prov_client/prov_device_ll_client.h"
 #include "azure_prov_client/prov_security_factory.h"
+#include "iothub_client_manager/iothub_client_manager.h"
 
 #ifdef SET_TRUSTED_CERT_IN_SAMPLES
 #include "certs.h"
@@ -131,25 +132,25 @@ int main()
     (void)IoTHub_Init();
     (void)prov_dev_security_init(hsm_type);
 
-    PROV_DEVICE_TRANSPORT_PROVIDER_FUNCTION prov_transport;
+    IOTHUB_CLIENT_TRANSPORT_PROVIDER protocol;
     CLIENT_SAMPLE_INFO user_ctx;
     memset(&user_ctx, 0, sizeof(CLIENT_SAMPLE_INFO));
 
     // Protocol to USE - HTTP, AMQP, AMQP_WS, MQTT, MQTT_WS
 #ifdef SAMPLE_MQTT
-    prov_transport = Prov_Device_MQTT_Protocol;
+    protocol = MQTT_Protocol;
 #endif // SAMPLE_MQTT
 #ifdef SAMPLE_MQTT_OVER_WEBSOCKETS
-    prov_transport = Prov_Device_MQTT_WS_Protocol;
+    protocol = MQTT_WebSocket_Protocol;
 #endif // SAMPLE_MQTT_OVER_WEBSOCKETS
 #ifdef SAMPLE_AMQP
-    prov_transport = Prov_Device_AMQP_Protocol;
+    protocol = AMQP_Protocol;
 #endif // SAMPLE_AMQP
 #ifdef SAMPLE_AMQP_OVER_WEBSOCKETS
-    prov_transport = Prov_Device_AMQP_WS_Protocol;
+    protocol = AMQP_Protocol_over_WebSocketsTls;
 #endif // SAMPLE_AMQP_OVER_WEBSOCKETS
 #ifdef SAMPLE_HTTP
-    prov_transport = Prov_Device_HTTP_Protocol;
+    protocol = HTTP_Protocol;
 #endif // SAMPLE_HTTP
 
     // Set ini
@@ -161,13 +162,15 @@ int main()
     IOTHUB_DEVICE_CLIENT_LL_HANDLE device_ll_handle;
 
     (void)printf("Creating IoTHub Device handle\r\n");
-    device_ll_handle = IoThub_Mgr_CreateClient(id_scope, prov_transport);
+    device_ll_handle = IoThub_Mgr_CreateClient(id_scope, protocol);
     if (device_ll_handle == NULL)
     {
         (void)printf("failed create IoTHub client from connection string %s!\r\n", user_ctx.iothub_uri);
     }
     else
     {
+        (void)printf("Iothub Manager successfully created an IoTHub Device handle\r\n");
+
         IOTHUB_CLIENT_SAMPLE_INFO iothub_info;
         TICK_COUNTER_HANDLE tick_counter_handle = tickcounter_create();
         tickcounter_ms_t current_tick;

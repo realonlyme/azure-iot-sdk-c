@@ -19,7 +19,7 @@ ENDIF(WIN32)
 if(${use_sample_trusted_cert})
     add_definitions(-DSET_TRUSTED_CERT_IN_SAMPLES)
     include_directories(${PROJECT_SOURCE_DIR}/certs)
-    set(iothub_client_manager_sample_c_files ${prov_dev_client_ll_sample_c_files} ${PROJECT_SOURCE_DIR}/certs/certs.c)
+    set(iothub_client_manager_sample_c_files ${iothub_client_manager_sample_c_files} ${PROJECT_SOURCE_DIR}/certs/certs.c)
 endif()
 
 include_directories(.)
@@ -28,7 +28,7 @@ include_directories(${DEV_AUTH_MODULES_CLIENT_INC_FOLDER})
 include_directories(${SHARED_UTIL_INC_FOLDER})
 include_directories(${CMAKE_CURRENT_LIST_DIR}/adapters)
 
-add_executable(iothub_client_manager_sample ${prov_dev_client_ll_sample_c_files} ${prov_dev_client_ll_sample_h_files})
+add_executable(iothub_client_manager_sample ${iothub_client_manager_sample_c_files} ${iothub_client_manager_sample_h_files})
 
 if(${use_openssl})
     add_definitions(-DUSE_OPENSSL)
@@ -43,7 +43,9 @@ endif()
 
 target_link_libraries(iothub_client_manager_sample
     iothub_client
-    prov_device_ll_client)
+    prov_device_ll_client
+    iothub_client_manager
+    )
 
 if (${use_http})
     target_link_libraries(iothub_client_manager_sample prov_http_transport)
