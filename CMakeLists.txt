@@ -344,6 +344,8 @@ if (NOT "${build_python}" STREQUAL "OFF")
     endif()
 endif()
 
+add_subdirectory(iothub_client_manager)
+
 if (${use_installed_dependencies})
     # Install azure_iot_sdks
     set(package_location "cmake")
