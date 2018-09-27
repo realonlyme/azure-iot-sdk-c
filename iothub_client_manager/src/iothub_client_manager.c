@@ -75,6 +75,32 @@ static void dps_register_device_callback(PROV_DEVICE_RESULT register_result, con
     }
 }
 
+static PROV_DEVICE_TRANSPORT_PROVIDER_FUNCTION create_dps_transport(IOTHUB_CLIENT_TRANSPORT_PROVIDER iothub_prov)
+{
+    PROV_DEVICE_TRANSPORT_PROVIDER_FUNCTION result = NULL;
+#if defined(USE_MQTT)
+    if (iothub_prov == MQTT_Protocol)
+    {
+        result = Prov_Device_MQTT_Protocol;
+    }
+    else if (iothub_prov == MQTT_WebSocket_Protocol)
+    {
+        result = Prov_Device_MQTT_WS_Protocol;
+    }
+#endif // USE_MQTT
+#ifdef USE_AMQP
+    if (iothub_prov == AMQP_Protocol)
+    {
+        result = Prov_Device_AMQP_Protocol;
+    }
+    else if (iothub_prov == AMQP_Protocol_over_WebSocketsTls)
+    {
+        result = Prov_Device_AMQP_WS_Protocol;
+    }
+#endif // USE_AMQP
+    return result;
+}
+
 static IOTHUB_CLIENT_TRANSPORT_PROVIDER create_iothub_transport(PROV_DEVICE_TRANSPORT_PROVIDER_FUNCTION dps_protocol)
 {
     IOTHUB_CLIENT_TRANSPORT_PROVIDER result;
@@ -141,7 +167,7 @@ static int create_and_execute_dps(const char* dps_id_scope, PROV_DEVICE_TRANSPOR
     return result;
 }
 
-IOTHUB_DEVICE_CLIENT_LL_HANDLE IoThub_Mgr_CreateClient(const char* dps_id_scope, PROV_DEVICE_TRANSPORT_PROVIDER_FUNCTION protocol)
+IOTHUB_DEVICE_CLIENT_LL_HANDLE IoThub_Mgr_CreateClient(const char* dps_id_scope, IOTHUB_CLIENT_TRANSPORT_PROVIDER protocol)
 {
     IOTHUB_DEVICE_CLIENT_LL_HANDLE result;
     IOTHUB_CLIENT_MGR iothub_mgr;
@@ -151,15 +177,16 @@ IOTHUB_DEVICE_CLIENT_LL_HANDLE IoThub_Mgr_CreateClient(const char* dps_id_scope,
     }
     else
     {
+
         memset(&iothub_mgr, 0, sizeof(IOTHUB_CLIENT_MGR) );
-        if (create_and_execute_dps(dps_id_scope,protocol, &iothub_mgr) != 0)
+        PROV_DEVICE_TRANSPORT_PROVIDER_FUNCTION prov_transport = create_dps_transport(protocol);
+        if (create_and_execute_dps(dps_id_scope, prov_transport, &iothub_mgr) != 0)
         {
             result = NULL;
         }
         else
         {
-            IOTHUB_CLIENT_TRANSPORT_PROVIDER iothub_transport = create_iothub_transport(protocol);
-            result = IoTHubDeviceClient_LL_CreateFromDeviceAuth(iothub_mgr.iothub_uri, iothub_mgr.device_id, iothub_transport);
+            result = IoTHubDeviceClient_LL_CreateFromDeviceAuth(iothub_mgr.iothub_uri, iothub_mgr.device_id, protocol);
             if (result == NULL)
             {
             }
@@ -168,7 +195,7 @@ IOTHUB_DEVICE_CLIENT_LL_HANDLE IoThub_Mgr_CreateClient(const char* dps_id_scope,
     return result;
 }
 
-IOTHUB_DEVICE_CLIENT_LL_HANDLE IoThub_Mgr_CreateClientAsync(const char* dps_id_scope, PROV_DEVICE_TRANSPORT_PROVIDER_FUNCTION protocol)
+IOTHUB_DEVICE_CLIENT_LL_HANDLE IoThub_Mgr_CreateClientAsync(const char* dps_id_scope, IOTHUB_CLIENT_TRANSPORT_PROVIDER protocol)
 {
     IOTHUB_DEVICE_CLIENT_LL_HANDLE result;
     if (dps_id_scope == NULL)
@@ -183,7 +210,7 @@ IOTHUB_DEVICE_CLIENT_LL_HANDLE IoThub_Mgr_CreateClientAsync(const char* dps_id_s
     return result;
 }
 
-IOTHUB_DEVICE_CLIENT_HANDLE IoThub_Mgr_CreateConvenienceClient(const char* dps_id_scope, PROV_DEVICE_TRANSPORT_PROVIDER_FUNCTION protocol)
+IOTHUB_DEVICE_CLIENT_HANDLE IoThub_Mgr_CreateConvenienceClient(const char* dps_id_scope, IOTHUB_CLIENT_TRANSPORT_PROVIDER protocol)
 {
     IOTHUB_DEVICE_CLIENT_HANDLE result;
     if (dps_id_scope == NULL)
@@ -198,7 +225,7 @@ IOTHUB_DEVICE_CLIENT_HANDLE IoThub_Mgr_CreateConvenienceClient(const char* dps_i
     return result; 
 }
 
-IOTHUB_DEVICE_CLIENT_HANDLE IoThub_Mgr_CreateConvenienceClientAsync(const char* dps_id_scope, PROV_DEVICE_TRANSPORT_PROVIDER_FUNCTION protocol)
+IOTHUB_DEVICE_CLIENT_HANDLE IoThub_Mgr_CreateConvenienceClientAsync(const char* dps_id_scope, IOTHUB_CLIENT_TRANSPORT_PROVIDER protocol)
 {
     IOTHUB_DEVICE_CLIENT_HANDLE result;
     if (dps_id_scope == NULL)
