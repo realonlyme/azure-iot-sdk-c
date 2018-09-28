@@ -16,7 +16,7 @@ Outlined below are the steps to customize a device HSM for the IoThub SDK Client
 
 - To expediate the development process there is a custom_hsm_example.c file that gives an example of the interface that will need to be implemented for the custom HSM.
 
-- The following is the list of mandatory functions that need to be implemented for x509 or TPM custom HSMs.
+- The following is the list of functions that need to be implemented for either x509 or TPM custom HSMs.
 
 ### hsm_client_x509_init
 

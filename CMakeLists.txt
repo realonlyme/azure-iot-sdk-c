@@ -48,6 +48,7 @@ endif()
 
 set(hsm_type_x509 OFF CACHE BOOL "x509 type of hsm used with the Provisioning client")
 set(hsm_type_sastoken OFF CACHE BOOL "tpm type of hsm used with the Provisioning client")
+set(hsm_type_symm_key OFF CACHE BOOL "Symmetric key type of hsm used with the Provisioning client")
 set(hsm_type_custom OFF CACHE BOOL "hsm type of custom used with the Provisioning client")
 set(hsm_custom_lib "" CACHE STRING "Full path to custom HSM repo library")
 set(run_sfc_tests OFF CACHE BOOL "setup the Service Fault tests")

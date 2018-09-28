@@ -1,16 +1,16 @@
 # Provisioning Device Client SDK
 
-The Provisioning Device SDK enables automatic provisioning of a device using an HSM (Hardware Security Module) against an IoThub.  There are two different authentication mode that the client supports: x509 or TPM.
+The Provisioning Device SDK enables automatic provisioning of a device using an HSM (Hardware Security Module) against an IoThub.  There are three different authentication mode that the client supports: x509 or TPM.
 
 ## Enabling Provisioning Device Client
 
-To use the Provisioning Device client code to connect to windows and linux HSM requires a switch to be sent during cmake initialization.  The following cmake command will enable provisioning:
+To use the Provisioning Device client code to connect to windows or linux HSM requires a switch to be sent during cmake initialization.  The following cmake command will enable provisioning:
 
 ```Shell
 cmake -Duse_prov_client:BOOL=ON ..
 ```
 
-## Enabling Provisioning Device Client  simulator
+## Enabling Provisioning Device Client simulator
 
 For development purposes the Provisioning Device Client uses simulators to mock hardware chips functionality:
 
@@ -30,7 +30,7 @@ For x509 the Provisioning Device Client enables a DICE hardware simulator that e
 
 ## Adding Enrollments with Azure Portal
 
-To enroll a device in the azure portal you will need to either get the Registration Id and Endorsement Key for TPM devices or the root CA certificate.  Running the provisioning tool will print out the information to be used in the portal:
+To enroll a device in the azure portal you will need to either get the Registration Id and Endorsement Key for TPM devices, the root CA certificate for x509 device or the Symmetric Key.  Running the provisioning tool will print out the information to be used in the portal:
 
 ### TPM Provisioning Tool
 
