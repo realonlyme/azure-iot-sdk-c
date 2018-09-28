@@ -61,10 +61,10 @@ static IOTHUB_PROCESS_ITEM_RESULT IoTHubTransportAMQP_ProcessItem(TRANSPORT_LL_H
     return IoTHubTransport_AMQP_Common_ProcessItem(handle, item_type, iothub_item);
 }
 
-static void IoTHubTransportAMQP_DoWork(TRANSPORT_LL_HANDLE handle, IOTHUB_CLIENT_CORE_LL_HANDLE iotHubClientHandle)
+static void IoTHubTransportAMQP_DoWork(TRANSPORT_LL_HANDLE handle)
 {
     // Codes_SRS_IOTHUBTRANSPORTAMQP_09_015: [IoTHubTransportAMQP_DoWork shall call into the IoTHubTransport_AMQP_Common_DoWork()]
-    IoTHubTransport_AMQP_Common_DoWork(handle, iotHubClientHandle);
+    IoTHubTransport_AMQP_Common_DoWork(handle);
 }
 
 static int IoTHubTransportAMQP_Subscribe(IOTHUB_DEVICE_HANDLE handle)

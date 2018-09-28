@@ -7,6 +7,7 @@
 #include "azure_c_shared_utility/strings.h"
 #include "azure_c_shared_utility/umock_c_prod.h"
 #include "internal/iothub_transport_ll_private.h"
+#include "iothub_client_core_ll.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -33,7 +34,7 @@ MOCKABLE_FUNCTION(, int, IoTHubTransport_AMQP_Common_Subscribe_DeviceMethod, IOT
 MOCKABLE_FUNCTION(, void, IoTHubTransport_AMQP_Common_Unsubscribe_DeviceMethod, IOTHUB_DEVICE_HANDLE, handle);
 MOCKABLE_FUNCTION(, int, IoTHubTransport_AMQP_Common_DeviceMethod_Response, IOTHUB_DEVICE_HANDLE, handle, METHOD_HANDLE, methodId, const unsigned char*, response, size_t, response_size, int, status_response);
 MOCKABLE_FUNCTION(, IOTHUB_PROCESS_ITEM_RESULT, IoTHubTransport_AMQP_Common_ProcessItem, TRANSPORT_LL_HANDLE, handle, IOTHUB_IDENTITY_TYPE, item_type, IOTHUB_IDENTITY_INFO*, iothub_item);
-MOCKABLE_FUNCTION(, void, IoTHubTransport_AMQP_Common_DoWork, TRANSPORT_LL_HANDLE, handle, IOTHUB_CLIENT_CORE_LL_HANDLE, iotHubClientHandle);
+MOCKABLE_FUNCTION(, void, IoTHubTransport_AMQP_Common_DoWork, TRANSPORT_LL_HANDLE, handle);
 MOCKABLE_FUNCTION(, int, IoTHubTransport_AMQP_Common_SetRetryPolicy, TRANSPORT_LL_HANDLE, handle, IOTHUB_CLIENT_RETRY_POLICY, retryPolicy, size_t, retryTimeoutLimitInSeconds);
 MOCKABLE_FUNCTION(, IOTHUB_CLIENT_RESULT, IoTHubTransport_AMQP_Common_GetSendStatus, IOTHUB_DEVICE_HANDLE, handle, IOTHUB_CLIENT_STATUS*, iotHubClientStatus);
 MOCKABLE_FUNCTION(, IOTHUB_CLIENT_RESULT, IoTHubTransport_AMQP_Common_SetOption, TRANSPORT_LL_HANDLE, handle, const char*, option, const void*, value);

@@ -17,13 +17,12 @@
 #include "azure_c_shared_utility/agenttime.h"
 
 #include "iothub_client_core_ll.h"
-#include "internal/iothub_client_authorization.h"
-#include "iothub_transport_ll.h"
-#include "internal/iothub_client_private.h"
 #include "iothub_client_options.h"
 #include "iothub_client_version.h"
+#include "iothub_transport_ll.h"
+#include "internal/iothub_client_authorization.h"
+#include "internal/iothub_client_private.h"
 #include "internal/iothub_client_diagnostic.h"
-#include <stdint.h>
 #include "internal/iothubtransport.h"
 
 #ifndef DONT_USE_UPLOADTOBLOB
@@ -271,6 +270,40 @@ static void setTransportProtocol(IOTHUB_CLIENT_CORE_LL_HANDLE_DATA* handleData, 
     handleData->IoTHubTransport_Unsubscribe_InputQueue = protocol->IoTHubTransport_Unsubscribe_InputQueue;
 }
 
+static bool is_event_equal(IOTHUB_EVENT_CALLBACK *event_callback, const char *input_name)
+{
+    bool result;
+
+    if (event_callback != NULL)
+    {
+        const char* event_input_name = STRING_c_str(event_callback->inputName);
+        if ((event_input_name != NULL) && (input_name != NULL))
+        {
+            // Matched the input queue name of a named handler
+            result = (strcmp(event_input_name, input_name) == 0);
+        }
+        else if ((input_name == NULL) && (event_input_name == NULL))
+        {
+            // Matched the default handler
+            result = true;
+        }
+        else
+        {
+            result = false;
+        }
+    }
+    else
+    {
+        result = false;
+    }
+    return result;
+}
+
+static bool is_event_equal_for_match(LIST_ITEM_HANDLE list_item, const void* match_context)
+{
+    return is_event_equal((IOTHUB_EVENT_CALLBACK*)singlylinkedlist_item_get_value(list_item), (const char*)match_context);
+}
+
 static void device_twin_data_destroy(IOTHUB_DEVICE_TWIN* client_item)
 {
     CONSTBUFFER_Destroy(client_item->report_data_handle);
@@ -353,6 +386,55 @@ static void destroy_module_method_module(IOTHUB_CLIENT_CORE_LL_HANDLE_DATA* hand
 #ifdef USE_EDGE_MODULES
     IoTHubClient_EdgeHandle_Destroy(handle_data->methodHandle);
 #endif
+}
+
+static bool invoke_message_callback(IOTHUB_CLIENT_CORE_LL_HANDLE_DATA* handleData, MESSAGE_CALLBACK_INFO* messageData)
+{
+    bool result;
+    /* Codes_SRS_IOTHUBCLIENT_LL_09_004: [IoTHubClient_LL_GetLastMessageReceiveTime shall return lastMessageReceiveTime in localtime] */
+    handleData->lastMessageReceiveTime = get_time(NULL);
+
+    switch (handleData->messageCallback.type)
+    {
+        case CALLBACK_TYPE_NONE:
+        {
+            /*Codes_SRS_IOTHUBCLIENT_LL_02_032: [If the client is not subscribed to receive messages then IoTHubClient_LL_MessageCallback shall return false.] */
+            LogError("Invalid workflow - not currently set up to accept messages");
+            result = false;
+            break;
+        }
+        case CALLBACK_TYPE_SYNC:
+        {
+            /*Codes_SRS_IOTHUBCLIENT_LL_02_030: [If messageCallbackType is LEGACY then IoTHubClient_LL_MessageCallback shall invoke the last callback function (the parameter messageCallback to IoTHubClient_LL_SetMessageCallback) passing the message and the passed userContextCallback.]*/
+            IOTHUBMESSAGE_DISPOSITION_RESULT cb_result = handleData->messageCallback.callbackSync(messageData->messageHandle, handleData->messageCallback.userContextCallback);
+
+            /*Codes_SRS_IOTHUBCLIENT_LL_10_007: [If messageCallbackType is LEGACY then IoTHubClient_LL_MessageCallback shall send the message disposition as returned by the client to the underlying layer.] */
+            if (handleData->IoTHubTransport_SendMessageDisposition(messageData, cb_result) != IOTHUB_CLIENT_OK)
+            {
+                LogError("IoTHubTransport_SendMessageDisposition failed");
+            }
+            result = true;
+            break;
+        }
+        case CALLBACK_TYPE_ASYNC:
+        {
+            /* Codes_SRS_IOTHUBCLIENT_LL_10_009: [If messageCallbackType is ASYNC then IoTHubClient_LL_MessageCallback shall return what messageCallbacEx returns.] */
+            result = handleData->messageCallback.callbackAsync(messageData, handleData->messageCallback.userContextCallback);
+            if (!result)
+            {
+                LogError("messageCallbackEx failed");
+            }
+            break;
+        }
+        default:
+        {
+            LogError("Invalid state");
+            result = false;
+            break;
+        }
+    }
+
+    return result;
 }
 
 /*Codes_SRS_IOTHUBCLIENT_LL_10_032: ["product_info" - takes a char string as an argument to specify the product information(e.g. `"ProductName/ProductVersion"`). ]*/
@@ -503,7 +585,7 @@ static const char* IoTHubClientCore_LL_GetProductInfo(void* ctx)
     else
     {
         IOTHUB_CLIENT_CORE_LL_HANDLE_DATA* iothub_data = (IOTHUB_CLIENT_CORE_LL_HANDLE_DATA*)ctx;
-        result = iothub_data->product_info;
+        result = STRING_c_str(iothub_data->product_info);
     }
     return result;
 }
@@ -1924,7 +2006,7 @@ void IoTHubClientCore_LL_DoWork(IOTHUB_CLIENT_CORE_LL_HANDLE iotHubClientHandle)
         }
 
         /*Codes_SRS_IOTHUBCLIENT_LL_02_021: [Otherwise, IoTHubClientCore_LL_DoWork shall invoke the underlaying layer's _DoWork function.]*/
-        handleData->IoTHubTransport_DoWork(handleData->transportHandle, iotHubClientHandle);
+        handleData->IoTHubTransport_DoWork(handleData->transportHandle);
     }
 }
 
@@ -1948,89 +2030,6 @@ IOTHUB_CLIENT_RESULT IoTHubClientCore_LL_GetSendStatus(IOTHUB_CLIENT_CORE_LL_HAN
     }
 
     return result;
-}
-
-static bool invoke_message_callback(IOTHUB_CLIENT_CORE_LL_HANDLE_DATA* handleData, MESSAGE_CALLBACK_INFO* messageData)
-{
-    bool result;
-    /* Codes_SRS_IOTHUBCLIENT_LL_09_004: [IoTHubClient_LL_GetLastMessageReceiveTime shall return lastMessageReceiveTime in localtime] */
-    handleData->lastMessageReceiveTime = get_time(NULL);
-
-    switch (handleData->messageCallback.type)
-    {
-        case CALLBACK_TYPE_NONE:
-        {
-            /*Codes_SRS_IOTHUBCLIENT_LL_02_032: [If the client is not subscribed to receive messages then IoTHubClient_LL_MessageCallback shall return false.] */
-            LogError("Invalid workflow - not currently set up to accept messages");
-            result = false;
-            break;
-        }
-        case CALLBACK_TYPE_SYNC:
-        {
-            /*Codes_SRS_IOTHUBCLIENT_LL_02_030: [If messageCallbackType is LEGACY then IoTHubClient_LL_MessageCallback shall invoke the last callback function (the parameter messageCallback to IoTHubClient_LL_SetMessageCallback) passing the message and the passed userContextCallback.]*/
-            IOTHUBMESSAGE_DISPOSITION_RESULT cb_result = handleData->messageCallback.callbackSync(messageData->messageHandle, handleData->messageCallback.userContextCallback);
-
-            /*Codes_SRS_IOTHUBCLIENT_LL_10_007: [If messageCallbackType is LEGACY then IoTHubClient_LL_MessageCallback shall send the message disposition as returned by the client to the underlying layer.] */
-            if (handleData->IoTHubTransport_SendMessageDisposition(messageData, cb_result) != IOTHUB_CLIENT_OK)
-            {
-                LogError("IoTHubTransport_SendMessageDisposition failed");
-            }
-            result = true;
-            break;
-        }
-        case CALLBACK_TYPE_ASYNC:
-        {
-            /* Codes_SRS_IOTHUBCLIENT_LL_10_009: [If messageCallbackType is ASYNC then IoTHubClient_LL_MessageCallback shall return what messageCallbacEx returns.] */
-            result = handleData->messageCallback.callbackAsync(messageData, handleData->messageCallback.userContextCallback);
-            if (!result)
-            {
-                LogError("messageCallbackEx failed");
-            }
-            break;
-        }
-        default:
-        {
-            LogError("Invalid state");
-            result = false;
-            break;
-        }
-    }
-
-    return result;
-}
-
-static bool is_event_equal(IOTHUB_EVENT_CALLBACK *event_callback, const char *input_name)
-{
-    bool result;
-
-    if (event_callback != NULL)
-    {
-        const char* event_input_name = STRING_c_str(event_callback->inputName);
-        if ((event_input_name != NULL) && (input_name != NULL))
-        {
-            // Matched the input queue name of a named handler
-            result = (strcmp(event_input_name, input_name) == 0);
-        }
-        else if ((input_name == NULL) && (event_input_name == NULL))
-        {
-            // Matched the default handler
-            result = true;
-        }
-        else
-        {
-            result = false;
-        }
-    }
-    else
-    {
-        result = false;
-    }
-    return result;
-}
-
-static bool is_event_equal_for_match(LIST_ITEM_HANDLE list_item, const void* match_context)
-{
-    return is_event_equal((IOTHUB_EVENT_CALLBACK*)singlylinkedlist_item_get_value(list_item), (const char*)match_context);
 }
 
 IOTHUB_CLIENT_RESULT IoTHubClientCore_LL_SetConnectionStatusCallback(IOTHUB_CLIENT_CORE_LL_HANDLE iotHubClientHandle, IOTHUB_CLIENT_CONNECTION_STATUS_CALLBACK connectionStatusCallback, void * userContextCallback)
@@ -2246,28 +2245,6 @@ IOTHUB_CLIENT_RESULT IoTHubClientCore_LL_SetOption(IOTHUB_CLIENT_CORE_LL_HANDLE 
             }
 #endif /*DONT_USE_UPLOADTOBLOB*/
         }
-    }
-    return result;
-}
-
-IOTHUB_CLIENT_RESULT IoTHubClientCore_LL_GetOption(IOTHUB_CLIENT_CORE_LL_HANDLE iotHubClientHandle, const char* optionName, void** value)
-{
-    IOTHUB_CLIENT_RESULT result;
-
-    if ((iotHubClientHandle == NULL) || (optionName == NULL) || (value == NULL))
-    {
-        result = IOTHUB_CLIENT_INVALID_ARG;
-        LogError("invalid argument iotHubClientHandle(%p); optionName(%p); value(%p)", iotHubClientHandle, optionName, value);
-    }
-    else if (strcmp(optionName, OPTION_PRODUCT_INFO) == 0)
-    {
-        result = IOTHUB_CLIENT_OK;
-        *value = iotHubClientHandle->product_info;
-    }
-    else
-    {
-        result = IOTHUB_CLIENT_INVALID_ARG;
-        LogError("invalid argument (%s)", optionName);
     }
     return result;
 }

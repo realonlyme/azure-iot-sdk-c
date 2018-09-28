@@ -179,9 +179,6 @@ typedef struct MQTTTRANSPORT_HANDLE_DATA_TAG
     // With the / delimeter you have 384 chars (Plus a terminator of 0).
     STRING_HANDLE configPassedThroughUsername;
 
-    // Upper layer
-    IOTHUB_CLIENT_CORE_LL_HANDLE llClientHandle;
-
     // Protocol
     MQTT_CLIENT_HANDLE mqttClient;
     XIO_HANDLE xioTransport;
@@ -1765,12 +1762,12 @@ static void mqtt_error_callback(MQTT_CLIENT_HANDLE handle, MQTT_CLIENT_EVENT_ERR
         {
             case MQTT_CLIENT_CONNECTION_ERROR:
             {
-                IoTHubClientCore_LL_ConnectionStatusCallBack(transport_data->llClientHandle, IOTHUB_CLIENT_CONNECTION_UNAUTHENTICATED, IOTHUB_CLIENT_CONNECTION_NO_NETWORK);
+                transport_data->transport_callbacks.connection_status_cb(IOTHUB_CLIENT_CONNECTION_UNAUTHENTICATED, IOTHUB_CLIENT_CONNECTION_NO_NETWORK, transport_data->transport_ctx);
                 break;
             }
             case MQTT_CLIENT_COMMUNICATION_ERROR:
             {
-                IoTHubClientCore_LL_ConnectionStatusCallBack(transport_data->llClientHandle, IOTHUB_CLIENT_CONNECTION_UNAUTHENTICATED, IOTHUB_CLIENT_CONNECTION_COMMUNICATION_ERROR);
+                transport_data->transport_callbacks.connection_status_cb(IOTHUB_CLIENT_CONNECTION_UNAUTHENTICATED, IOTHUB_CLIENT_CONNECTION_COMMUNICATION_ERROR, transport_data->transport_ctx);
                 break;
             }
             case MQTT_CLIENT_NO_PING_RESPONSE:
@@ -2061,12 +2058,12 @@ static int SendMqttConnectMsg(PMQTTTRANSPORT_HANDLE_DATA transport_data)
         SAS_TOKEN_STATUS token_status = IoTHubClient_Auth_Is_SasToken_Valid(transport_data->authorization_module);
         if (token_status == SAS_TOKEN_STATUS_INVALID)
         {
-            IoTHubClientCore_LL_ConnectionStatusCallBack(transport_data->llClientHandle, IOTHUB_CLIENT_CONNECTION_UNAUTHENTICATED, IOTHUB_CLIENT_CONNECTION_EXPIRED_SAS_TOKEN);
+            transport_data->transport_callbacks.connection_status_cb(IOTHUB_CLIENT_CONNECTION_UNAUTHENTICATED, IOTHUB_CLIENT_CONNECTION_EXPIRED_SAS_TOKEN, transport_data->transport_ctx);
             result = __FAILURE__;
         }
         else if (token_status == SAS_TOKEN_STATUS_FAILED)
         {
-            IoTHubClientCore_LL_ConnectionStatusCallBack(transport_data->llClientHandle, IOTHUB_CLIENT_CONNECTION_UNAUTHENTICATED, IOTHUB_CLIENT_CONNECTION_BAD_CREDENTIAL);
+            transport_data->transport_callbacks.connection_status_cb(IOTHUB_CLIENT_CONNECTION_UNAUTHENTICATED, IOTHUB_CLIENT_CONNECTION_BAD_CREDENTIAL, transport_data->transport_ctx);
             result = __FAILURE__;
         }
         else
@@ -2089,15 +2086,15 @@ static int SendMqttConnectMsg(PMQTTTRANSPORT_HANDLE_DATA transport_data)
             // Also, when device multiplexing is used, the customer creates the transport directly and explicitly, when the client is still not created.
             // This will be a major hurdle when we add device multiplexing to MQTT transport.
 
-            void* product_info;
             STRING_HANDLE clone;
-            if ((IoTHubClientCore_LL_GetOption(transport_data->llClientHandle, OPTION_PRODUCT_INFO, &product_info) == IOTHUB_CLIENT_ERROR) || (product_info == NULL))
+            const char* product_info = transport_data->transport_callbacks.prod_info_cb(transport_data->transport_ctx);
+            if (product_info == NULL)
             {
                 clone = STRING_construct_sprintf("%s%%2F%s", CLIENT_DEVICE_TYPE_PREFIX, IOTHUB_SDK_VERSION);
             }
             else
             {
-                clone = URL_Encode(product_info);
+                clone = URL_EncodeString(product_info);
             }
 
             if (clone == NULL)
@@ -2239,7 +2236,7 @@ static int InitializeConnection(PMQTTTRANSPORT_HANDLE_DATA transport_data)
                     /* Codes_SRS_IOTHUB_TRANSPORT_MQTT_COMMON_07_058: [ If the sas token has timed out IoTHubTransport_MQTT_Common_DoWork shall disconnect from the mqtt client and destroy the transport information and wait for reconnect. ] */
                     DisconnectFromClient(transport_data);
 
-                    IoTHubClientCore_LL_ConnectionStatusCallBack(transport_data->llClientHandle, IOTHUB_CLIENT_CONNECTION_UNAUTHENTICATED, IOTHUB_CLIENT_CONNECTION_EXPIRED_SAS_TOKEN);
+                    transport_data->transport_callbacks.connection_status_cb(IOTHUB_CLIENT_CONNECTION_UNAUTHENTICATED, IOTHUB_CLIENT_CONNECTION_EXPIRED_SAS_TOKEN, transport_data->transport_ctx);
                     transport_data->currPacketState = UNKNOWN_TYPE;
                     transport_data->device_twin_get_sent = false;
                     if (transport_data->topic_MqttMessage != NULL)
@@ -2397,7 +2394,6 @@ static PMQTTTRANSPORT_HANDLE_DATA InitializeTransportHandleData(const IOTHUB_CLI
                         state->device_twin_get_sent = false;
                         state->isRecoverableError = true;
                         state->packetId = 1;
-                        state->llClientHandle = NULL;
                         state->xioTransport = NULL;
                         state->portNum = 0;
                         state->waitingToSend = waitingToSend;
@@ -2865,14 +2861,12 @@ IOTHUB_PROCESS_ITEM_RESULT IoTHubTransport_MQTT_Common_ProcessItem(TRANSPORT_LL_
 }
 
 /* Codes_SRS_IOTHUB_MQTT_TRANSPORT_07_054: [ IoTHubTransport_MQTT_Common_DoWork shall subscribe to the Notification and get_state Topics if they are defined. ] */
-void IoTHubTransport_MQTT_Common_DoWork(TRANSPORT_LL_HANDLE handle, IOTHUB_CLIENT_CORE_LL_HANDLE iotHubClientHandle)
+void IoTHubTransport_MQTT_Common_DoWork(TRANSPORT_LL_HANDLE handle)
 {
     /* Codes_SRS_IOTHUB_MQTT_TRANSPORT_07_026: [IoTHubTransport_MQTT_Common_DoWork shall do nothing if parameter handle and/or iotHubClientHandle is NULL.] */
     PMQTTTRANSPORT_HANDLE_DATA transport_data = (PMQTTTRANSPORT_HANDLE_DATA)handle;
-    if (transport_data != NULL && iotHubClientHandle != NULL)
+    if (transport_data != NULL)
     {
-        transport_data->llClientHandle = iotHubClientHandle;
-
         if (InitializeConnection(transport_data) != 0)
         {
             // Don't want to flood the logs with failures here

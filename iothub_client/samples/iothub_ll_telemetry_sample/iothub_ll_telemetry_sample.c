@@ -4,6 +4,7 @@
 // CAVEAT: This sample is to demonstrate azure IoT client concepts only and is not a guide design principles or style
 // Checking of return codes and error values shall be omitted for brevity.  Please practice sound engineering practices
 // when writing production code.
+#include <vld.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +16,7 @@
 #include "azure_c_shared_utility/threadapi.h"
 #include "azure_c_shared_utility/crt_abstractions.h"
 #include "azure_c_shared_utility/shared_util_options.h"
+#include "azure_c_shared_utility/tickcounter.h"
 
 #ifdef SET_TRUSTED_CERT_IN_SAMPLES
 #include "certs.h"
@@ -53,10 +55,11 @@ and removing calls to _DoWork will yield the same results. */
 #endif // SET_TRUSTED_CERT_IN_SAMPLES
 
 /* Paste in the your iothub connection string  */
-static const char* connectionString = "[device connection string]";
-#define MESSAGE_COUNT        5
+static const char* connectionString = "HostName=iot-test-sdk.azure-devices.net;DeviceId=current_test;SharedAccessKey=HgtEYTb93Qb9WGfFdtYICteCHPkX7sQ5Ca8rGJuLUps=";
+#define MESSAGE_COUNT               10
 static bool g_continueRunning = true;
 static size_t g_message_count_send_confirmations = 0;
+#define TIME_BETWEEN_MSG    2
 
 static void send_confirm_callback(IOTHUB_CLIENT_CONFIRMATION_RESULT result, void* userContextCallback)
 {
@@ -66,10 +69,10 @@ static void send_confirm_callback(IOTHUB_CLIENT_CONFIRMATION_RESULT result, void
     (void)printf("Confirmation callback received for message %zu with result %s\r\n", g_message_count_send_confirmations, ENUM_TO_STRING(IOTHUB_CLIENT_CONFIRMATION_RESULT, result));
 }
 
-static void connection_status_callback(IOTHUB_CLIENT_CONNECTION_STATUS result, IOTHUB_CLIENT_CONNECTION_STATUS_REASON reason, void* user_context)
+static void connection_status_callback(IOTHUB_CLIENT_CONNECTION_STATUS result, IOTHUB_CLIENT_CONNECTION_STATUS_REASON reason, void* user_ctx)
 {
     (void)reason;
-    (void)user_context;
+    (void)user_ctx;
     // This sample DOES NOT take into consideration network outages.
     if (result == IOTHUB_CLIENT_CONNECTION_AUTHENTICATED)
     {
@@ -79,6 +82,31 @@ static void connection_status_callback(IOTHUB_CLIENT_CONNECTION_STATUS result, I
     {
         (void)printf("The device client has been disconnected\r\n");
     }
+}
+
+static void device_twin_callback(DEVICE_TWIN_UPDATE_STATE update_state, const unsigned char* payload, size_t size, void* user_ctx)
+{
+    (void)update_state;
+    (void)size;
+    (void)user_ctx;
+
+    (void)printf("Twin Payload %.*s\r\n", size, payload);
+}
+
+static int device_method_callback(const char* method_name, const unsigned char* payload, size_t size, unsigned char** response, size_t* response_size, void* user_ctx)
+{
+    int result;
+    (void)user_ctx;
+
+    (void)printf("Method Name: %s - Payload %.*s\r\n", method_name, size, payload);
+
+    const char deviceMethodResponse[] = "{ \"Response\": \"1HGCM82633A004352\" }";
+    *response_size = sizeof(deviceMethodResponse) - 1;
+    *response = malloc(*response_size);
+    (void)memcpy(*response, deviceMethodResponse, *response_size);
+    result = 200;
+
+    return result;
 }
 
 int main(void)
@@ -121,6 +149,7 @@ int main(void)
     {
         // Set any option that are neccessary.
         // For available options please see the iothub_sdk_options.md documentation
+        TICK_COUNTER_HANDLE tick_handle = tickcounter_create();
 
         bool traceOn = true;
         IoTHubDeviceClient_LL_SetOption(device_ll_handle, OPTION_LOG_TRACE, &traceOn);
@@ -128,8 +157,12 @@ int main(void)
 #ifdef SET_TRUSTED_CERT_IN_SAMPLES
         // Setting the Trusted Certificate.  This is only necessary on system with without
         // built in certificate stores.
-            IoTHubDeviceClient_LL_SetOption(device_ll_handle, OPTION_TRUSTED_CERT, certificates);
+        IoTHubDeviceClient_LL_SetOption(device_ll_handle, OPTION_TRUSTED_CERT, certificates);
 #endif // SET_TRUSTED_CERT_IN_SAMPLES
+
+    uint32_t perc = 100;
+    IoTHubDeviceClient_LL_SetOption(device_ll_handle, OPTION_DIAGNOSTIC_SAMPLING_PERCENTAGE, &perc);
+
 
 #if defined SAMPLE_MQTT || defined SAMPLE_MQTT_WS
         //Setting the auto URL Encoder (recommended for MQTT). Please use this option unless
@@ -141,10 +174,17 @@ int main(void)
 
         // Setting connection status callback to get indication of connection to iothub
         (void)IoTHubDeviceClient_LL_SetConnectionStatusCallback(device_ll_handle, connection_status_callback, NULL);
+        (void)IoTHubDeviceClient_LL_SetDeviceTwinCallback(device_ll_handle, device_twin_callback, NULL);
+        (void)IoTHubDeviceClient_LL_SetDeviceMethodCallback(device_ll_handle, device_method_callback, NULL);
 
+        tickcounter_ms_t last_send;
+        (void)tickcounter_get_current_ms(tick_handle, &last_send);
+        last_send += TIME_BETWEEN_MSG * 1000;
         do
         {
-            if (messages_sent < MESSAGE_COUNT)
+            tickcounter_ms_t curr_tick;
+            (void)tickcounter_get_current_ms(tick_handle, &curr_tick);
+            if ((curr_tick - last_send) / 1000 > TIME_BETWEEN_MSG)
             {
                 // Construct the iothub message from a string or a byte array
                 message_handle = IoTHubMessage_CreateFromString(telemetry_msg);
@@ -165,18 +205,19 @@ int main(void)
                 // The message is copied to the sdk so the we can destroy it
                 IoTHubMessage_Destroy(message_handle);
 
+                last_send = curr_tick;
                 messages_sent++;
             }
-            else if (g_message_count_send_confirmations >= MESSAGE_COUNT)
-            {
-                // After all messages are all received stop running
-                g_continueRunning = false;
-            }
-
             IoTHubDeviceClient_LL_DoWork(device_ll_handle);
             ThreadAPI_Sleep(1);
 
+            if (messages_sent == MESSAGE_COUNT)
+            {
+                g_continueRunning = false;
+            }
         } while (g_continueRunning);
+
+        tickcounter_destroy(tick_handle);
 
         // Clean up the iothub sdk handle
         IoTHubDeviceClient_LL_Destroy(device_ll_handle);

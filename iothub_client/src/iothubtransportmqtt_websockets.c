@@ -160,9 +160,9 @@ static IOTHUB_PROCESS_ITEM_RESULT IoTHubTransportMqtt_WS_ProcessItem(TRANSPORT_L
 }
 
 /* Codes_SRS_IOTHUB_MQTT_WEBSOCKET_TRANSPORT_07_007: [ IoTHubTransportMqtt_WS_DoWork shall call into the IoTHubMqttAbstract_DoWork function. ] */
-static void IoTHubTransportMqtt_WS_DoWork(TRANSPORT_LL_HANDLE handle, IOTHUB_CLIENT_CORE_LL_HANDLE iotHubClientHandle)
+static void IoTHubTransportMqtt_WS_DoWork(TRANSPORT_LL_HANDLE handle)
 {
-    IoTHubTransport_MQTT_Common_DoWork(handle, iotHubClientHandle);
+    IoTHubTransport_MQTT_Common_DoWork(handle);
 }
 
 /* Codes_SRS_IOTHUB_MQTT_WEBSOCKET_TRANSPORT_07_008: [ IoTHubTransportMqtt_WS_GetSendStatus shall get the send status by calling into the IoTHubMqttAbstract_GetSendStatus function. ] */

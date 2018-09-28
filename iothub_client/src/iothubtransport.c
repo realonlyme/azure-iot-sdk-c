@@ -188,7 +188,7 @@ static int transport_worker_thread(void* threadArgument)
             }
             else
             {
-                (transportData->IoTHubTransport_DoWork)(transportData->transportLLHandle, NULL);
+                (transportData->IoTHubTransport_DoWork)(transportData->transportLLHandle);
 
                 (void)Unlock(transportData->lockHandle);
             }
