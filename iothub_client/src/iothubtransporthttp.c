@@ -796,8 +796,10 @@ static bool create_perDeviceList(HTTPTRANSPORT_HANDLE_DATA* handleData)
 }
 
 
-static TRANSPORT_LL_HANDLE IoTHubTransportHttp_Create(const IOTHUBTRANSPORT_CONFIG* config)
+static TRANSPORT_LL_HANDLE IoTHubTransportHttp_Create(const IOTHUBTRANSPORT_CONFIG* config, TRANSPORT_CALLBACKS_INFO* cb_info, void* ctx)
 {
+    (void)cb_info;
+    (void)ctx;
     HTTPTRANSPORT_HANDLE_DATA* result;
     if (config == NULL)
     {
@@ -2314,12 +2316,10 @@ static IOTHUB_PROCESS_ITEM_RESULT IoTHubTransportHttp_ProcessItem(TRANSPORT_LL_H
     return IOTHUB_PROCESS_ERROR;
 }
 
-static void IoTHubTransportHttp_DoWork(TRANSPORT_LL_HANDLE handle, IOTHUB_CLIENT_CORE_LL_HANDLE iotHubClientHandle)
+static void IoTHubTransportHttp_DoWork(TRANSPORT_LL_HANDLE handle)
 {
     /*Codes_SRS_TRANSPORTMULTITHTTP_17_049: [ If handle is NULL, then IoTHubTransportHttp_DoWork shall do nothing. ]*/
     /*Codes_SRS_TRANSPORTMULTITHTTP_17_140: [ If iotHubClientHandle is NULL, then IoTHubTransportHttp_DoWork shall do nothing. ]*/
-
-    (void)iotHubClientHandle; // use the perDevice handle.
     if (handle != NULL)
     {
         HTTPTRANSPORT_HANDLE_DATA* handleData = (HTTPTRANSPORT_HANDLE_DATA*)handle;

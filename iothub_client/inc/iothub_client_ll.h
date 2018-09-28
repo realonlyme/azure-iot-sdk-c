@@ -28,7 +28,6 @@
 
 #include "azure_c_shared_utility/umock_c_prod.h"
 
-//#include "iothub_transport_ll.h"
 #include "iothub_client_core_common.h"
 
 #ifdef __cplusplus
